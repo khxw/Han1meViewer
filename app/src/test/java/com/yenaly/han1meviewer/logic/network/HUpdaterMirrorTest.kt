@@ -1,6 +1,7 @@
 package com.yenaly.han1meviewer.logic.network
 
 import com.yenaly.han1meviewer.GITHUB_UPDATE_MIRROR
+import com.yenaly.han1meviewer.GITHUB_UPDATE_MIRROR_COMPAT
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,17 +22,21 @@ class HUpdaterMirrorTest {
 
     @Test
     fun existingMirrorUrlIsNotDoublePrefixed() {
-        val mirrorUrl = GITHUB_UPDATE_MIRROR +
+        val mirrorUrl = GITHUB_UPDATE_MIRROR_COMPAT +
             "https://github.com/khxw/Han1meViewer/releases/download/v2.1.151/app.apk"
         assertEquals(mirrorUrl, mirrorUrl.toGitHubUpdateMirrorUrl())
     }
 
     @Test
-    fun mirrorEnabledUsesMirrorThenGithubFallback() {
-        val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.153/app.apk"
+    fun mirrorEnabledUsesPrimaryThenCompatThenGithubFallback() {
+        val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.156/app.apk"
 
         assertEquals(
-            listOf(GITHUB_UPDATE_MIRROR + direct, direct),
+            listOf(
+                GITHUB_UPDATE_MIRROR + direct,
+                GITHUB_UPDATE_MIRROR_COMPAT + direct,
+                direct,
+            ),
             buildUpdateDownloadCandidates(direct, useMirror = true),
         )
     }
@@ -39,7 +44,7 @@ class HUpdaterMirrorTest {
     @Test
     fun mirrorDisabledUsesOnlyGithub() {
         val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.153/app.apk"
-        val mirror = GITHUB_UPDATE_MIRROR + direct
+        val mirror = GITHUB_UPDATE_MIRROR_COMPAT + direct
 
         assertEquals(
             listOf(direct),

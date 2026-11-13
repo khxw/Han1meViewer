@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.logic.network
 
 import android.util.Log
 import com.yenaly.han1meviewer.GITHUB_UPDATE_MIRROR
+import com.yenaly.han1meviewer.GITHUB_UPDATE_MIRROR_COMPAT
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.util.checkNeedUpdate
@@ -101,18 +102,11 @@ object HUpdater {
         url: String,
         progress: (suspend (Int, Long, Long) -> Unit)?,
     ) {
-        if (url.startsWith(GITHUB_UPDATE_MIRROR)) {
-            ServiceCreator.downloadClient.newCall(
-                Request.Builder().url(url).get().build()
-            ).await().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                writeUpdateBody(url, response.body, progress)
-            }
-        } else {
-            val response = HanimeNetwork.githubService.request(url)
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
-            val body = response.body() ?: throw IOException("Empty update response")
-            writeUpdateBody(url, body, progress)
+        ServiceCreator.updateClient.newCall(
+            Request.Builder().url(url).get().build()
+        ).await().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+            writeUpdateBody(url, response.body, progress)
         }
     }
 
@@ -153,22 +147,29 @@ object HUpdater {
 }
 
 internal fun buildUpdateDownloadCandidates(url: String, useMirror: Boolean): List<String> {
-    val directUrl = if (url.startsWith(GITHUB_UPDATE_MIRROR)) {
-        url.removePrefix(GITHUB_UPDATE_MIRROR)
-    } else {
-        url
-    }
+    val directUrl = url.removeUpdateMirrorPrefix()
     return when {
         !useMirror -> listOf(directUrl)
         directUrl.startsWith("https://github.com/") ->
-            listOf(directUrl.toGitHubUpdateMirrorUrl(), directUrl)
+            listOf(
+                directUrl.toGitHubUpdateMirrorUrl(),
+                GITHUB_UPDATE_MIRROR_COMPAT + directUrl,
+                directUrl,
+            )
         else -> listOf(url)
     }.distinct()
 }
 
+private fun String.removeUpdateMirrorPrefix(): String =
+    when {
+        startsWith(GITHUB_UPDATE_MIRROR) -> removePrefix(GITHUB_UPDATE_MIRROR)
+        startsWith(GITHUB_UPDATE_MIRROR_COMPAT) -> removePrefix(GITHUB_UPDATE_MIRROR_COMPAT)
+        else -> this
+    }
+
 internal fun String.toGitHubUpdateMirrorUrl(): String {
     return when {
-        startsWith(GITHUB_UPDATE_MIRROR) -> this
+        startsWith(GITHUB_UPDATE_MIRROR) || startsWith(GITHUB_UPDATE_MIRROR_COMPAT) -> this
         startsWith("https://github.com/") -> GITHUB_UPDATE_MIRROR + this
         else -> this
     }

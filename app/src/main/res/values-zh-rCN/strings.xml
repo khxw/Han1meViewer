@@ -227,7 +227,7 @@
     <string name="account_or_password_wrong">账户或密码可能错误</string>
     <string name="update">更新</string>
     <string name="use_update_mirror">使用更新镜像</string>
-    <string name="use_update_mirror_summary">通过 gh-proxy.com 下载 GitHub Release；失败时回退 GitHub 原地址。关闭后仅使用 GitHub 原地址。</string>
+    <string name="use_update_mirror_summary">优先通过 gh-proxy.org 下载 GitHub Release，依次回退备用镜像与 GitHub 原地址。关闭后仅使用 GitHub 原地址。</string>
     <string name="update_popup_interval_days">检查更新弹窗间隔天数</string>
     <string name="update_failed">更新失败</string>
     <string name="update_download_background">在后台下载更新</string>

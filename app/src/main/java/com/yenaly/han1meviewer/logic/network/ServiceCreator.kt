@@ -15,6 +15,7 @@ import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.yenaly_libs.utils.unsafeLazy
 import okhttp3.Cache
 import okhttp3.CookieJar
+import okhttp3.Dns
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -71,6 +72,9 @@ object ServiceCreator {
     var downloadClient: OkHttpClient = buildDownloadClient()
         private set
 
+    var updateClient: OkHttpClient = buildUpdateClient()
+        private set
+
     var getchuClient: OkHttpClient = buildGetchuClient()
         private set
 
@@ -109,6 +113,25 @@ object ServiceCreator {
             .addInterceptor(downloadSpeedLimitInterceptor)
             .proxySelector(HProxySelector())
             .dns(dns)
+            .build()
+    }
+
+    /**
+     * 更新包专用客户端：不受视频下载限速影响，并允许大文件长期读取。
+     */
+    private fun buildUpdateClient(): OkHttpClient {
+        val updateDns = object : Dns {
+            override fun lookup(hostname: String) = when (hostname) {
+                "github.com", "api.github.com" -> GitHubDns.lookup(hostname)
+                else -> dns.lookup(hostname)
+            }
+        }
+        return OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .addInterceptor(UserAgentInterceptor)
+            .proxySelector(HProxySelector())
+            .dns(updateDns)
             .build()
     }
 

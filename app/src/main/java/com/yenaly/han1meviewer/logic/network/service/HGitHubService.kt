@@ -6,8 +6,6 @@ import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Query
-import retrofit2.http.Streaming
-import retrofit2.http.Url
 
 /**
  * @project Han1meViewer
@@ -31,12 +29,4 @@ interface HGitHubService {
         @Query("ref") ref: String,
     ): Response<ResponseBody>
 
-    /**
-     * Typical request
-     */
-    @GET
-    @Streaming
-    suspend fun request(
-        @Url url: String,
-    ): Response<ResponseBody>
 }

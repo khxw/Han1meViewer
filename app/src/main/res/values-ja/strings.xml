@@ -240,7 +240,7 @@
     <string name="account_or_password_wrong">アカウントまたはパスワードが間違っている可能性</string>
     <string name="update">更新</string>
     <string name="use_update_mirror">更新ミラーを使用</string>
-    <string name="use_update_mirror_summary">gh-proxy.com 経由で GitHub Release をダウンロードし、失敗時は GitHub の元アドレスにフォールバックします。無効にすると GitHub の元アドレスのみを使用します。</string>
+    <string name="use_update_mirror_summary">gh-proxy.org を優先して GitHub Release をダウンロードし、互換ミラー、GitHub の元アドレスへ順にフォールバックします。無効にすると GitHub の元アドレスのみを使用します。</string>
     <string name="update_popup_interval_days">更新確認ポップアップ間隔（日）</string>
     <string name="update_failed">更新失敗</string>
     <string name="update_download_background">バックグラウンドで更新をダウンロード</string>
