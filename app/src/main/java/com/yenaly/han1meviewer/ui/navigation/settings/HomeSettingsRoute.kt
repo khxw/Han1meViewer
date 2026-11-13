@@ -75,8 +75,8 @@ private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
+private const val HOME_USE_UPDATE_MIRROR = "use_update_mirror"
 private const val HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS = "announcement_fetch_interval_hours"
-private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
 private const val HOME_USE_DARK_MODE = "use_dark_mode"
 private const val HOME_ALLOW_RESUME_PLAYBACK = "allow_resume_playback"
@@ -322,11 +322,6 @@ fun HomeSettingsRouteScreen(
             saveHomeCategoryPreferences(order, hiddenKeys)
             refreshKey++
         },
-        onUseCIUpdateChannelChange = { value ->
-            saveBoolean(HOME_USE_CI_UPDATE_CHANNEL, value)
-            refreshKey++
-            AppViewModel.getLatestVersion()
-        },
         onUseLockScreenChange = { value ->
             if (value) {
                 if (!isDeviceSecureCompat(context)) {
@@ -364,6 +359,10 @@ fun HomeSettingsRouteScreen(
             } else {
                 AppViewModel.getLatestVersion(forceShow = true)
             }
+        },
+        onUseUpdateMirrorChange = { enabled ->
+            saveBoolean(HOME_USE_UPDATE_MIRROR, enabled)
+            refreshKey++
         },
         onUpdatePopupIntervalDaysChange = {
             Preferences.preferenceSp.edit { putInt(HOME_UPDATE_POPUP_INTERVAL_DAYS, it) }
@@ -566,10 +565,10 @@ private fun buildHomeSettingsUiState(
         useCompactMode = Preferences.useCompactMode,
         collapseDownloadedGroup = Preferences.collapseDownloadedGroup,
         useDynamicColor = Preferences.useDynamicColor,
-        useCIUpdateChannel = Preferences.useCIUpdateChannel,
         useLockScreen = Preferences.preferenceSp.getBoolean(HOME_USE_LOCK_SCREEN, false),
         fakeLauncherIconName = currentItem.name,
         updateSummary = updateSummary,
+        useUpdateMirror = Preferences.useUpdateMirror,
         versionSummary = context.getString(
             R.string.current_version,
             "v${BuildConfig.VERSION_NAME}"

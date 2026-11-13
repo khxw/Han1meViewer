@@ -1,8 +1,8 @@
 # Han1meViewer 对话记忆与维护文档
 
 > 整理日期：2026-11-13  
-> 当前代码版本：2.1.150  
-> 当前版本号：261113255  
+> 当前代码版本：2.1.154  
+> 当前版本号：261113259  
 > 项目根目录：F:\Han1me\Han1meViewer-Remastered-Org-Han1meViewer-Remastered-8abff7d  
 > 本文用途：记录历次需求、已经实施的修改、明确禁止的事项、发布版本、验证结果和尚未完成的后续工作。
 
@@ -142,7 +142,7 @@
 - compileSdk 37
 - targetSdk 37
 - minSdk 27
-- 5 个 ABI 包：arm64-v8a、armeabi-v7a、universal、x86_64、x86
+- 默认仅构建并验证 arm64-v8a 包
 - zipalign 16 KB 验证通过
 
 ## 5. 版本演进记录
@@ -308,7 +308,11 @@
 | 2.1.147 | 261101252 | 网络诊断合并为单个“网络与热点环境”检查项；结论优先区分 HTTP 403/429、5xx、VPN、热点、未验证互联网、Hosts/DoH 已解析但 TLS 失败、纯 DNS 失败，避免把所有失败都误判为 DNS 或 SNI 阻断 | 已被 2.1.148 取代 |
 | 2.1.148 | 261101253 | 修 Cloudflare 验证页未开始就退出：CookieManager 会保留旧 `cf_clearance`，原逻辑只判断 Cookie 是否存在，Activity 启动 800ms 后就把旧值当成本次验证成功。现在记录启动前值，只在页面开始加载且 `cf_clearance` 新值出现后完成验证 | 已被 2.1.149 取代 |
 | 2.1.149 | 261113254 | 修 WebView 登录成功后停在 `/user/<id>/edit` 不返回：旧逻辑只在重定向目标恰好等于网站根地址时完成登录。现在检测同域首页或 `/user/...` 页面，并把 `hanime1_session`、`laravel_session`、`remember_web_*` 视为登录会话；同时不再在打开登录页时清空全部 WebView Cookie | 已被 2.1.150 取代 |
-| 2.1.150 | 261113255 | 修账号页 200 但显示加载失败：站点头像结构已从 `img#playlist-avatar` 改为 `.profile-avatar-wrapper img` / `#user-photo-wrapper img`，旧解析器因头像字段缺失抛错。现增加新旧选择器兼容，头像成为非关键字段，用户名支持 `.profile-display-name`，用户 ID 可用请求参数兜底 | 当前版本 |
+| 2.1.150 | 261113255 | 修账号页 200 但显示加载失败：站点头像结构已从 `img#playlist-avatar` 改为 `.profile-avatar-wrapper img` / `#user-photo-wrapper img`，旧解析器因头像字段缺失抛错。现增加新旧选择器兼容，头像成为非关键字段，用户名支持 `.profile-display-name`，用户 ID 可用请求参数兜底 | 已被 2.1.151 取代 |
+| 2.1.151 | 261113256 | 更新检查切换到 `khxw/Han1meViewer` 的 GitHub Release；Release APK 优先通过 `gh-proxy.com` 镜像下载，失败后回退 GitHub 原地址；镜像请求使用独立 OkHttp，不向镜像发送 GitHub Token | 已被 2.1.152 取代 |
+| 2.1.152 | 261113257 | 按用户要求彻底移除 CI 更新通道：删除设置开关、偏好键、四语言文案、Workflow/Artifact/Commit 模型与 GitHub Actions 接口；应用更新检查仅保留 GitHub Release 通道 | 已被 2.1.153 取代 |
+| 2.1.153 | 261113258 | 设置页新增“使用更新镜像”开关，默认开启；开启时 Release APK 优先经 `gh-proxy.com` 下载并在失败时回退 GitHub，关闭时只使用 GitHub 原地址。下载候选地址按当前开关动态生成，兼容切换前缓存的镜像链接 | 已被 2.1.154 取代 |
+| 2.1.154 | 261113259 | 优化启动时自动检查更新：主界面就绪后后台触发；GitHub 客户端增加 4 秒连接、8 秒读取和 10 秒总调用硬超时；API 优先使用实测更快的固定 IP；成功检查后记录时间，并按更新弹窗间隔节流，避免每次启动重复请求；初始更新状态不再长期停留在“检查更新中” | 当前版本 |
 
 ### 5.1 2.1.90 当前产物
 
@@ -2239,6 +2243,72 @@ SHA-256：
   （38,963,961 字节），SHA-256
   `7A0420BF44F2B05C4E950A9FA3FFB012A0F67761D9197918B991AB83698292D3`。
 
+### 6.115 更新源切换与 Release 镜像（2.1.151）
+
+- 更新源切换到 `khxw/Han1meViewer`，检查更新统一读取 GitHub Releases 的
+  `releases/latest`。
+- Release APK 下载优先使用 `https://gh-proxy.com/` 镜像；镜像失败时回退到
+  GitHub 原下载地址。
+- 镜像请求使用独立 OkHttp 客户端，不附带 GitHub Token。
+- 公告继续通过 GitHub Contents API 读取，维护分支引用保持
+  `codex/remastered-2.1.150`。
+- 验证：单测共 28 条全过，0 失败 / 0 错误；仅构建 arm64-v8a，
+  versionName `2.1.151` / versionCode `261113256`；v2 签名与 16 KB 对齐通过。
+- 产物：
+  `app\build\outputs\apk\release\Han1meViewer-v2.1.151-arm64-v8a.apk`
+  （38,963,961 字节），SHA-256
+  `0C03BFB02DB6C46CC8F561594300523A6168A016BAC48FE37075F10EF86E6C2C`。
+
+### 6.116 移除 CI 更新通道（2.1.152）
+
+- 按用户要求不保留 CI 更新通道，应用只检查 GitHub Release。
+- 删除 `HGitHubService` 中的 Actions Workflow Runs、Commit Comparison、
+  Artifacts 接口及其引用类型。
+- 删除设置页“使用 CI 更新通道”开关、对应偏好键和回调，以及简中、繁中、
+  英文、日文四语言文案。
+- 删除无引用的 `Workflow.kt`、`Commit.kt` 模型，避免后续误接回 Actions 产物。
+- 保留 Release APK 的 `gh-proxy.com` 镜像优先下载和 GitHub 原地址回退。
+- 验证：单测共 28 条全过，0 失败 / 0 错误；仅构建 arm64-v8a，
+  versionName `2.1.152` / versionCode `261113257`；v2 签名与 16 KB 对齐通过。
+- 产物：
+  `app\build\outputs\apk\release\Han1meViewer-v2.1.152-arm64-v8a.apk`
+  （38,962,537 字节），SHA-256
+  `EC4FA8BAC8AFE0D8FC06C33ABA342C40D78B2C26D64BC79402AB30C8CA7BFF86`。
+
+### 6.117 新增更新镜像开关（2.1.153）
+
+- 设置 → 首页设置 → 更新中新增“使用更新镜像”开关，默认开启。
+- 开启时更新下载优先走 `https://gh-proxy.com/`，失败后自动回退到 GitHub
+  原下载地址。
+- 关闭时只使用 GitHub 原地址，不再尝试镜像。
+- 下载候选地址在任务运行时按当前设置生成，因此切换开关后也能正确处理此前
+  缓存的镜像地址。
+- 同步补充简中、繁中、英文、日文四语言标题与说明。
+- 验证：单测共 31 条全过，0 失败 / 0 错误；仅构建 arm64-v8a，
+  versionName `2.1.153` / versionCode `261113258`；v2 签名与 16 KB 对齐通过。
+- 产物：
+  `app\build\outputs\apk\release\Han1meViewer-v2.1.153-arm64-v8a.apk`
+  （38,964,177 字节），SHA-256
+  `DF91778D19BEF54ED68E884FF758D23D450BEB6BDDFC4AA0866B970F4D3D0A14`。
+
+### 6.118 优化启动自动检查更新（2.1.154）
+
+- 自动检查放在主界面完成订阅后、后台延时 800ms 触发，不阻塞首页加载和启动动画。
+- GitHub 更新客户端改为连接超时 4 秒、读取超时 8 秒、整次调用硬超时 10 秒，
+  避免异常线路长时间停留。
+- `api.github.com` 固定 IP 列表改为优先使用实测更快的
+  `20.205.243.168`，其余地址作为回退。
+- 新增最近成功检查时间：按“检查更新弹窗间隔天数”节流，即使已经是最新版本，
+  也不会每次启动都重复请求；间隔为 0 时仍保持每次启动检查。
+- 初始版本状态改为成功/无更新，避免未触发检查时设置页一直显示“检查更新中”。
+- 新增 4 条检查间隔单测，覆盖首次检查、间隔内、间隔到期和间隔为 0。
+- 验证：单测共 35 条全过，0 失败 / 0 错误；仅构建 arm64-v8a，
+  versionName `2.1.154` / versionCode `261113259`；v2 签名与 16 KB 对齐通过。
+- 产物：
+  `app\build\outputs\apk\release\Han1meViewer-v2.1.154-arm64-v8a.apk`
+  （38,964,177 字节），SHA-256
+  `EC876EBAAA15AABD6E51FA6927265426081A40DB75E04DC936C949C3284DABE7`。
+
 ## 7. 当前已经实现的功能清单
 
 - 首页视频浏览、搜索、详情、评论和播放
@@ -2266,6 +2336,7 @@ SHA-256：
 - 当前域名限流冷却
 - 手动域名切换
 - 日志导出
+- GitHub Release 更新检查与可切换的 `gh-proxy.com` 镜像下载回退
 - 自动系列归并
 - 系列缺失集和继续播放
 - 系列自动连播

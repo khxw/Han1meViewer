@@ -226,7 +226,8 @@ Some mirrors may not support login, may not share cookies, may fail verification
     <string name="login_success">Login Successful</string>
     <string name="account_or_password_wrong">Account or password may be incorrect</string>
     <string name="update">Update</string>
-    <string name="use_ci_update_channel">Use CI Update Channel</string>
+    <string name="use_update_mirror">Use Update Mirror</string>
+    <string name="use_update_mirror_summary">Download GitHub Releases through gh-proxy.com with automatic fallback to GitHub. When disabled, only the original GitHub address is used.</string>
     <string name="update_popup_interval_days">Update Check Popup Interval (Days)</string>
     <string name="update_failed">Update Failed</string>
     <string name="update_download_background">Download Updates in Background</string>

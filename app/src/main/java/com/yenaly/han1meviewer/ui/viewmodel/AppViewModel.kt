@@ -13,6 +13,7 @@ import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
 import com.yenaly.yenaly_libs.base.YenalyViewModel
 import com.yenaly.yenaly_libs.utils.application
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +33,11 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
      */
     override var csrfToken: String? = null
 
-    private val _versionFlow = MutableStateFlow<WebsiteState<Latest?>>(WebsiteState.Loading)
+    private val _versionFlow = MutableStateFlow<WebsiteState<Latest?>>(WebsiteState.Success(null))
     val versionFlow = _versionFlow.asStateFlow()
+
+    private var updateCheckJob: Job? = null
+    private var autoUpdateCheckStarted = false
 
     private val _pendingUpdateDialog = MutableSharedFlow<Latest>(extraBufferCapacity = 1)
     val pendingUpdateDialog = _pendingUpdateDialog.asSharedFlow()
@@ -75,8 +79,20 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
         }
     }
 
+    fun checkForUpdateOnAppStart() {
+        if (autoUpdateCheckStarted) return
+        autoUpdateCheckStarted = true
+        if (!Preferences.isUpdateCheckIntervalElapsed) return
+        getLatestVersion(
+            forceCheck = true,
+            delayMillis = 800,
+            forceShow = false,
+        )
+    }
+
     fun getLatestVersion(forceCheck: Boolean = true, delayMillis: Long = 0, forceShow: Boolean = false) {
-        viewModelScope.launch {
+        updateCheckJob?.cancel()
+        updateCheckJob = viewModelScope.launch {
             delay(delayMillis)
             getLatestVersionSuspend(forceCheck, forceShow)
         }
@@ -85,6 +101,9 @@ object AppViewModel : YenalyViewModel(application), IHCsrfToken {
     private suspend fun getLatestVersionSuspend(forceCheck: Boolean = true, forceShow: Boolean = false) {
         NetworkRepo.getLatestVersion(forceCheck).collect {
             _versionFlow.value = it
+            if (it is WebsiteState.Success) {
+                Preferences.lastUpdateCheckTime = kotlin.time.Clock.System.now().epochSeconds
+            }
             if (it is WebsiteState.Success && (forceShow || Preferences.isUpdateDialogVisible)) {
                 it.info?.let { info -> _pendingUpdateDialog.emit(info) }
             }

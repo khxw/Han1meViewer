@@ -133,7 +133,10 @@ object ServiceCreator {
 
     private fun buildGithubClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            // 更新检查必须有硬上限，避免固定 IP 线路异常时长时间停留在“检查更新中”
+            .callTimeout(10, TimeUnit.SECONDS)
             .dns(GitHubDns)
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(UrlLoggingInterceptor())

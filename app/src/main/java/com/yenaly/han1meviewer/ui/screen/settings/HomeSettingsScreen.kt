@@ -77,7 +77,6 @@ fun HomeSettingsScreen(
     onCollapseDownloadedGroupChange: (Boolean) -> Unit,
     onSearchGridColumnsConfigChange: (SearchGridColumnsConfig) -> Unit,
     onHorizontalCardCountConfigChange: (HorizontalCardCountConfig) -> Unit,
-    onUseCIUpdateChannelChange: (Boolean) -> Unit,
     onUseLockScreenChange: (Boolean) -> Unit,
     onThemeColorChange: (String) -> Unit,
     onHomeCategoryPreferencesChange: (List<String>, Set<String>) -> Unit,
@@ -89,6 +88,7 @@ fun HomeSettingsScreen(
     onOpenNetworkSettings: () -> Unit,
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
+    onUseUpdateMirrorChange: (Boolean) -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
     onAnnouncementFetchIntervalHoursChange: (Int) -> Unit,
     onOpenApplyDeepLinks: () -> Unit,
@@ -594,10 +594,11 @@ fun HomeSettingsScreen(
         }
         item {
             SettingSwitchItem(
-                title = stringResource(R.string.use_ci_update_channel),
-                checked = state.useCIUpdateChannel,
-                iconRes = R.drawable.ic_setting_ci,
-                onCheckedChange = onUseCIUpdateChannelChange,
+                title = stringResource(R.string.use_update_mirror),
+                summary = stringResource(R.string.use_update_mirror_summary),
+                checked = state.useUpdateMirror,
+                iconRes = R.drawable.ic_baseline_download_24,
+                onCheckedChange = onUseUpdateMirrorChange,
             )
         }
         item {
@@ -734,11 +735,11 @@ private fun HomeSettingsScreenPreview() {
                 disableComments = false,
                 collapseDownloadedGroup = false,
                 useDynamicColor = true,
-                useCIUpdateChannel = false,
                 useLockScreen = false,
                 fakeLauncherIconName = "Han1meViewer",
                 updateSummary = "已經是最新版本！",
-                        versionSummary = "當前版本：v1.0.0",
+                versionSummary = "當前版本：v1.0.0",
+                useUpdateMirror = true,
                 updatePopupIntervalSummary = "7天\n最近還沒跳出過更新視窗哦",
                 updatePopupIntervalDays = 7,
                 announcementFetchIntervalHours = 6,
@@ -782,7 +783,6 @@ private fun HomeSettingsScreenPreview() {
             onCollapseDownloadedGroupChange = {},
             onSearchGridColumnsConfigChange = {},
             onHorizontalCardCountConfigChange = {},
-            onUseCIUpdateChannelChange = {},
             onUseLockScreenChange = {},
             onThemeColorChange = {},
             onHomeCategoryPreferencesChange = { _, _ -> },
@@ -794,6 +794,7 @@ private fun HomeSettingsScreenPreview() {
             onOpenNetworkSettings = {},
             onOpenAppLanguageSettings = {},
             onCheckUpdate = {},
+            onUseUpdateMirrorChange = {},
             onUpdatePopupIntervalDaysChange = {},
             onAnnouncementFetchIntervalHoursChange = {},
             onOpenApplyDeepLinks = {},

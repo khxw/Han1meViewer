@@ -8,7 +8,7 @@
 
 Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览、搜索、播放和管理 hanime 相关公开视频页面内容。当前项目以 Jetpack Compose、Navigation Compose、ViewModel、StateFlow、Retrofit、Jsoup、Room、WorkManager、Media3/JZVD/MPV 为主要技术栈，围绕视频浏览、详情播放、搜索、用户列表、下载管理、评论、订阅、设置和隐私保护等功能组织。
 
-本应用没有任何官方网站。GitHub Release 与 CI 构建产物是唯一下载及更新渠道。
+本应用没有任何官方网站。GitHub Release 是唯一下载及更新渠道。
 
 ## 📜 项目来源与许可
 
@@ -82,7 +82,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 - 💾 存储管理：支持缓存、下载和手机视频占用统计，以及失效记录和临时文件清理。
 - 🎨 界面设置：支持 Material 3、多主题和深色模式、动态颜色、抽屉/底部导航、页面动画和自适应卡片。
 - ⚙️ 个性化：支持多语言、屏幕刷新率、应用锁、假图标、深链接、流量提醒和后台下载设置。
-- 🗞️ 公告与更新：支持公告详情和操作链接、Release/CI 更新检查、应用内更新下载、GitHub 直连失败时经 `gh-proxy.com` 镜像下载、日志查看导出及备份导入导出。
+- 🗞️ 公告与更新：支持公告详情和操作链接、GitHub Release 更新检查、应用内更新下载、可切换的 `gh-proxy.com` 更新镜像与 GitHub 原地址回退、日志查看导出及备份导入导出。
 
 ## 🗞️ 公告系统使用须知
 

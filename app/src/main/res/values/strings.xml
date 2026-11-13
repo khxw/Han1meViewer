@@ -235,7 +235,8 @@
     <string name="login_success">登入成功</string>
     <string name="account_or_password_wrong">帳號或密碼可能錯誤</string>
     <string name="update">更新</string>
-    <string name="use_ci_update_channel">使用 CI 更新通道。</string>
+    <string name="use_update_mirror">使用更新鏡像</string>
+    <string name="use_update_mirror_summary">透過 gh-proxy.com 下載 GitHub Release；失敗時會回退 GitHub 原地址。關閉後僅使用 GitHub 原地址。</string>
     <string name="update_popup_interval_days">檢查更新跳出視窗間隔天數</string>
     <string name="update_failed">更新失敗</string>
     <string name="update_download_background">在背景下載更新</string>

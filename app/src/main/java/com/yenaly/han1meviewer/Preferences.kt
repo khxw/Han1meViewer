@@ -161,17 +161,28 @@ object Preferences {
         get() = getSpValue(SettingsPreferenceKeys.LAST_UPDATE_POPUP_TIME, 0L)
         set(value) = putSpValue(SettingsPreferenceKeys.LAST_UPDATE_POPUP_TIME, value)
 
+    var lastUpdateCheckTime
+        get() = getSpValue(SettingsPreferenceKeys.LAST_UPDATE_CHECK_TIME, 0L)
+        set(value) = putSpValue(SettingsPreferenceKeys.LAST_UPDATE_CHECK_TIME, value)
+
     val updatePopupIntervalDays
         get() = preferenceSp.getInt(SettingsPreferenceKeys.UPDATE_POPUP_INTERVAL_DAYS, 0)
+
+    val useUpdateMirror: Boolean
+        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_UPDATE_MIRROR, true)
+
+    val isUpdateCheckIntervalElapsed: Boolean
+        get() = isUpdateCheckIntervalElapsed(
+            nowEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
+            lastCheckEpochSeconds = lastUpdateCheckTime,
+            intervalDays = updatePopupIntervalDays,
+        )
 
     /**
      * 公告拉取间隔（小时）。0 表示不拉取公告，默认 6 小时。
      */
     val announcementFetchIntervalHours
         get() = preferenceSp.getInt(SettingsPreferenceKeys.ANNOUNCEMENT_FETCH_INTERVAL_HOURS, 6)
-
-    val useCIUpdateChannel
-        get() = preferenceSp.getBoolean(SettingsPreferenceKeys.USE_CI_UPDATE_CHANNEL, false)
 
     // Check if show update dialog.
     @OptIn(ExperimentalTime::class)    val isUpdateDialogVisible: Boolean
@@ -545,4 +556,13 @@ object Preferences {
             )
             return SpeedLimitInterceptor.speedBytesAt(index)
         }
+}
+
+internal fun isUpdateCheckIntervalElapsed(
+    nowEpochSeconds: Long,
+    lastCheckEpochSeconds: Long,
+    intervalDays: Int,
+): Boolean {
+    if (intervalDays <= 0 || lastCheckEpochSeconds <= 0L) return true
+    return nowEpochSeconds - lastCheckEpochSeconds >= intervalDays * 86_400L
 }

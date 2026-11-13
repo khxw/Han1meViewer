@@ -144,6 +144,9 @@ fun MainActivityContent(
                 pendingUpdate = latest
             }
         }
+        LaunchedEffect(Unit) {
+            AppViewModel.checkForUpdateOnAppStart()
+        }
         LaunchedEffect(viewModel) {
             viewModel.sessionExpiredMessage.collect { event ->
                 event.message?.let(::showShortToast) ?: showShortToast(event.fallbackResId)

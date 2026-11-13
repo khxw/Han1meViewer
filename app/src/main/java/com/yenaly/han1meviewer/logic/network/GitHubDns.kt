@@ -12,8 +12,9 @@ object GitHubDns : Dns {
     override fun lookup(hostname: String): List<InetAddress> {
         return when (hostname) {
             "api.github.com" -> listOf(
-                InetAddress.getByName("140.82.116.6"),
+                // 国内网络实测该线路通常最快；其余地址保留为回退。
                 InetAddress.getByName("20.205.243.168"),
+                InetAddress.getByName("140.82.116.6"),
                 InetAddress.getByName("140.82.121.6")
             )
             "github.com" -> listOf(
