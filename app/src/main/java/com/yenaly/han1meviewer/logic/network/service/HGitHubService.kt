@@ -32,7 +32,9 @@ interface HGitHubService {
      */
     @Headers("Accept: application/vnd.github.raw")
     @GET("contents/announcements.json")
-    suspend fun getAnnouncements(): Response<ResponseBody>
+    suspend fun getAnnouncements(
+        @Query("ref") ref: String,
+    ): Response<ResponseBody>
 
     /**
      * What is Workflow Runs?

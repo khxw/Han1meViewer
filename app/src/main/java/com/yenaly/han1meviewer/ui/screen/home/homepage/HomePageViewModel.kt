@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.HJson
+import com.yenaly.han1meviewer.HA1_ANNOUNCEMENTS_REF
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SAVED_USER_ID
@@ -137,7 +138,7 @@ class HomePageViewModel: ViewModel() {
     private suspend fun fetchAnnouncementsFromNetwork(): List<Announcement>? =
         withContext(Dispatchers.IO) {
             runCatching {
-                val response = HanimeNetwork.githubService.getAnnouncements()
+                val response = HanimeNetwork.githubService.getAnnouncements(HA1_ANNOUNCEMENTS_REF)
                 if (!response.isSuccessful) return@runCatching null
                 val body = response.body()?.string().orEmpty()
                 HJson.decodeFromString<List<AnnouncementDto>>(body)

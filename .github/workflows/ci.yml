@@ -37,7 +37,7 @@ jobs:
           mv keystore.jks $HOME/.android/keystore.jks
 
       - name: Build and sign APK with Gradle
-        run: ./gradlew assembleRelease
+        run: ./gradlew :app:testDebugUnitTest :app:assembleRelease -PfastBuild=true
         env:
           KEYSTORE_PASSWORD: ${{ secrets.YOUR_KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.YOUR_KEYSTORE_PASSWORD }}

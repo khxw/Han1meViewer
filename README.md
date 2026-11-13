@@ -82,11 +82,11 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 - 💾 存储管理：支持缓存、下载和手机视频占用统计，以及失效记录和临时文件清理。
 - 🎨 界面设置：支持 Material 3、多主题和深色模式、动态颜色、抽屉/底部导航、页面动画和自适应卡片。
 - ⚙️ 个性化：支持多语言、屏幕刷新率、应用锁、假图标、深链接、流量提醒和后台下载设置。
-- 🗞️ 公告与更新：支持公告详情和操作链接、Release/CI 更新检查、应用内更新下载、日志查看导出及备份导入导出。
+- 🗞️ 公告与更新：支持公告详情和操作链接、Release/CI 更新检查、应用内更新下载、GitHub 直连失败时经 `gh-proxy.com` 镜像下载、日志查看导出及备份导入导出。
 
 ## 🗞️ 公告系统使用须知
 
-当前代码中的公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API 匿名读取 `5APU-A340/Han1meViewer-Remastered` 仓库根目录下的 `announcements.json`，而不是 `raw.githubusercontent.com`。这一路径在受限网络下通常比 raw CDN 更稳定。
+当前代码中的公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API 匿名读取 `khxw/Han1meViewer` 当前维护分支中的 `announcements.json`，而不是 `raw.githubusercontent.com`。公告分支引用由 `HA1_ANNOUNCEMENTS_REF` 配置。
 
 前置条件：
 
@@ -102,10 +102,9 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 维护步骤：
 
-1. 当前发布版读取的是 `5APU-A340/Han1meViewer-Remastered`，不是本 Fork 根目录的 `announcements.json`。
-2. 如果希望本 Fork 自托管公告，需要先修改 `Constants.kt` 中的 `HA1_GITHUB_API_URL` 和 `HA1_ANNOUNCEMENTS_URL`，再构建新版本。
-3. 修改代码指向的公告仓库后，编辑其根目录 `announcements.json` 并推送到该仓库 `main` 分支即可生效。
-4. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
+1. 编辑本仓库根目录的 [`announcements.json`](announcements.json) 并推送到 `HA1_ANNOUNCEMENTS_REF` 指向的分支。
+2. 当前公告分支为 `codex/remastered-2.1.150`；切换或合并维护分支后，需要同步更新 `HA1_ANNOUNCEMENTS_REF`。
+3. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
 
 公告字段说明：
 
@@ -147,7 +146,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 - `logic.network`：Retrofit Service、OkHttp 拦截器、DNS、CookieJar、更新服务和网络入口。
 - `logic.model`：页面和网络解析后的领域模型，如 `HanimeVideo`、`HanimeInfo`、`HomePage`、`Playlists` 等。
 - `logic.dao` / `logic.entity`：Room 数据库、DAO 和实体，用于历史、下载、搜索历史、关键帧、打卡等本地数据。
-- `announcement` 链路：当前代码从 `5APU-A340/Han1meViewer-Remastered` 的 `announcements.json` 读取公告；如果改成 Fork 自托管，需要同步修改 `Constants.kt` 的 GitHub API 地址。
+- `announcement` 链路：公告从 `khxw/Han1meViewer` 的 `announcements.json` 读取，分支引用由 `Constants.kt` 中的 `HA1_ANNOUNCEMENTS_REF` 控制。
 - `worker`：WorkManager 下载任务和更新任务。
 - `util`：主题、网络、文件、权限、Cookie、Toast、视频和通用工具方法。
 

@@ -406,7 +406,7 @@ Room 主要用于：
 
 ## 13. 公告系统
 
-当前代码读取 `5APU-A340/Han1meViewer-Remastered` 仓库根目录的 `announcements.json`。本 Fork 根目录虽然也包含该文件，但修改它不会影响当前已构建应用；若要切换为自托管，需要同步修改 `Constants.kt` 中的 GitHub API 与 raw URL。
+当前代码读取 `khxw/Han1meViewer` 仓库中的 `announcements.json`。具体分支由 `Constants.kt` 的 `HA1_ANNOUNCEMENTS_REF` 控制，公告 URL 由 `HA1_ANNOUNCEMENTS_URL` 提供备用入口。
 
 关键文件：
 

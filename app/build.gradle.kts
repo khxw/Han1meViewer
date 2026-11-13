@@ -44,7 +44,7 @@ android {
         applicationId = "com.han1meviewer.remastered"
         minSdk = property("min.sdk")?.toString()?.toIntOrNull()
         targetSdk = property("target.sdk")?.toString()?.toIntOrNull()
-        val (code, name) = createVersion(major = 2, minor = 1, patch = 150, versionCodePatch = 255)
+        val (code, name) = createVersion(major = 2, minor = 1, patch = 151, versionCodePatch = 256)
         versionCode = code
         versionName = name
 

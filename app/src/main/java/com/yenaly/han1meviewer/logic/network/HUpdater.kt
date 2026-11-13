@@ -2,14 +2,20 @@ package com.yenaly.han1meviewer.logic.network
 
 import android.util.Log
 import com.yenaly.han1meviewer.BuildConfig
+import com.yenaly.han1meviewer.GITHUB_UPDATE_MIRROR
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.github.CommitComparison
 import com.yenaly.han1meviewer.logic.model.github.Latest
 import com.yenaly.han1meviewer.util.checkNeedUpdate
 import com.yenaly.han1meviewer.util.copyTo
 import com.yenaly.han1meviewer.util.runSuspendCatching
+import com.yenaly.han1meviewer.util.await
+import okhttp3.Request
+import okhttp3.ResponseBody
 import okio.use
 import java.io.File
+import java.io.IOException
+import java.util.concurrent.CancellationException
 import java.util.zip.ZipInputStream
 
 /**
@@ -65,7 +71,7 @@ object HUpdater {
                     val asset = ver.pickBestApkAsset() ?: return null
                     return Latest(
                         ver.tagName, ver.body,
-                        asset.browserDownloadURL,
+                        asset.browserDownloadURL.toGitHubUpdateMirrorUrl(),
                         asset.nodeID
                     )
                 }
@@ -102,10 +108,63 @@ object HUpdater {
      * @param url update url
      */
     suspend fun File.injectUpdate(url: String, progress: (suspend (Int, Long, Long) -> Unit)? = null) {
-        val res = HanimeNetwork.githubService.request(url)
+        val candidates = buildList {
+            add(url)
+            when {
+                url.startsWith(GITHUB_UPDATE_MIRROR) -> {
+                    add(url.removePrefix(GITHUB_UPDATE_MIRROR))
+                }
+
+                url.startsWith("https://github.com/") -> {
+                    add(url.toGitHubUpdateMirrorUrl())
+                }
+            }
+        }.distinct()
+        var lastError: Exception? = null
+        for (candidate in candidates) {
+            try {
+                delete()
+                downloadUpdateOnce(candidate, progress)
+                if (length() > 0L) return
+                throw IOException("Downloaded update is empty")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                delete()
+                Log.w(TAG, "Update download failed: $candidate - ${e.message}")
+            }
+        }
+        throw lastError ?: IOException("No usable update download URL")
+    }
+
+    private suspend fun File.downloadUpdateOnce(
+        url: String,
+        progress: (suspend (Int, Long, Long) -> Unit)?,
+    ) {
+        if (url.startsWith(GITHUB_UPDATE_MIRROR)) {
+            ServiceCreator.downloadClient.newCall(
+                Request.Builder().url(url).get().build()
+            ).await().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                writeUpdateBody(url, response.body, progress)
+            }
+        } else {
+            val response = HanimeNetwork.githubService.request(url)
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code()}")
+            val body = response.body() ?: throw IOException("Empty update response")
+            writeUpdateBody(url, body, progress)
+        }
+    }
+
+    private suspend fun File.writeUpdateBody(
+        url: String,
+        body: ResponseBody,
+        progress: (suspend (Int, Long, Long) -> Unit)?,
+    ) {
         if (url.endsWith("zip")) {
             Log.d(TAG, "Injecting update from zip ($url)")
-            res.body()?.use { body ->
+            body.use {
                 body.byteStream().use { stream ->
                     ZipInputStream(stream).use { zip ->
                         zip.nextEntry
@@ -119,10 +178,14 @@ object HUpdater {
             }
         } else {
             Log.d(TAG, "Injecting update from release ($url)")
-            this.outputStream().use {
-                res.body()?.use { body ->
-                    Log.i(TAG, "content length: ${body.contentLength()}")
-                    body.byteStream().copyTo(it, body.contentLength(), progress = progress)
+            this.outputStream().use { output ->
+                body.use { response ->
+                    Log.i(TAG, "content length: ${response.contentLength()}")
+                    response.byteStream().copyTo(
+                        output,
+                        response.contentLength(),
+                        progress = progress,
+                    )
                 }
             }
         }
@@ -141,5 +204,13 @@ object HUpdater {
             val message = commit.commit.message.replace(linefeedRegex, "\n")
             "↓ (@${commit.commit.author.name})\n$message"
         }
+    }
+}
+
+internal fun String.toGitHubUpdateMirrorUrl(): String {
+    return when {
+        startsWith(GITHUB_UPDATE_MIRROR) -> this
+        startsWith("https://github.com/") -> GITHUB_UPDATE_MIRROR + this
+        else -> this
     }
 }
