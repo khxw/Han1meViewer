@@ -12,7 +12,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 ## 📜 项目来源与许可
 
-此项目最初 Fork 自 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)，感谢原作者的贡献。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
+当前维护分支直接 Fork 自 [misaka10032w/Han1meViewer](https://github.com/misaka10032w/Han1meViewer)，该项目又源自原作者 [YenalyLiew/Han1meViewer](https://github.com/YenalyLiew/Han1meViewer)。感谢两位作者及所有上游贡献者。原项目采用 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)。
 
 根据 Apache 2.0 许可证要求：
 
@@ -86,7 +86,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 ## 🗞️ 公告系统使用须知
 
-公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API（`GET /repos/5APU-A340/Han1meViewer-Remastered/contents/announcements.json`，`Accept: application/vnd.github.raw`，见 `HGitHubService.getAnnouncements()`）匿名读取仓库根目录下的 `announcements.json`，而不是 `raw.githubusercontent.com`——后者在部分用户的网络/代理环境下不稳定，改用与"检查更新"相同的 `api.github.com` 通道更可靠。
+当前代码中的公告数据由 `HomePageViewModel.fetchAnnouncements()` 通过 GitHub Contents API 匿名读取 `5APU-A340/Han1meViewer-Remastered` 仓库根目录下的 `announcements.json`，而不是 `raw.githubusercontent.com`。这一路径在受限网络下通常比 raw CDN 更稳定。
 
 前置条件：
 
@@ -102,9 +102,10 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 
 维护步骤：
 
-1. 直接编辑仓库根目录下的 [`announcements.json`](announcements.json)，新增或修改公告对象。
-2. 提交并推送到 `main` 分支即可生效（GitHub API 有少量缓存延迟，一般几分钟内更新）。
-3. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
+1. 当前发布版读取的是 `5APU-A340/Han1meViewer-Remastered`，不是本 Fork 根目录的 `announcements.json`。
+2. 如果希望本 Fork 自托管公告，需要先修改 `Constants.kt` 中的 `HA1_GITHUB_API_URL` 和 `HA1_ANNOUNCEMENTS_URL`，再构建新版本。
+3. 修改代码指向的公告仓库后，编辑其根目录 `announcements.json` 并推送到该仓库 `main` 分支即可生效。
+4. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
 
 公告字段说明：
 
@@ -146,7 +147,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 - `logic.network`：Retrofit Service、OkHttp 拦截器、DNS、CookieJar、更新服务和网络入口。
 - `logic.model`：页面和网络解析后的领域模型，如 `HanimeVideo`、`HanimeInfo`、`HomePage`、`Playlists` 等。
 - `logic.dao` / `logic.entity`：Room 数据库、DAO 和实体，用于历史、下载、搜索历史、关键帧、打卡等本地数据。
-- `announcement` 链路：公告数据从本仓库托管的 `announcements.json`（经 GitHub Contents API）读取，首页通过 `HomePageViewModel.fetchAnnouncements()` 拉取并展示。
+- `announcement` 链路：当前代码从 `5APU-A340/Han1meViewer-Remastered` 的 `announcements.json` 读取公告；如果改成 Fork 自托管，需要同步修改 `Constants.kt` 的 GitHub API 地址。
 - `worker`：WorkManager 下载任务和更新任务。
 - `util`：主题、网络、文件、权限、Cookie、Toast、视频和通用工具方法。
 
@@ -208,7 +209,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 1. 克隆项目：
 
    ```bash
-   git clone https://github.com/5APU-A340/Han1meViewer-Remastered.git
+   git clone https://github.com/khxw/Han1meViewer.git
    ```
 
 2. 使用 Android Studio 打开项目根目录。
@@ -221,6 +222,7 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 
 ```bash
 ./gradlew :app:compileDebugKotlin
+./gradlew :app:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ```
 
@@ -228,13 +230,21 @@ DownloadScreen -> DownloadViewModel -> HanimeDownloadManagerV2 -> WorkManager Wo
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest
 .\gradlew.bat :app:assembleDebug
 ```
+
+Release 构建说明：
+
+- `.\gradlew.bat :app:assembleRelease -PfastBuild=true`：只生成 `arm64-v8a`，用于日常迭代。
+- `.\gradlew.bat :app:assembleRelease`：生成 `arm64-v8a`、`armeabi-v7a`、`x86`、`x86_64` 和 `universal` 包。
 
 🔏 Release 构建需要本地或 CI 提供签名相关环境变量：
 
 - `KEYSTORE_PASSWORD`
 - `KEY_ALIAS`
+
+签名文件默认读取 `$HOME/.android/keystore.jks`。
 
 🔑 GitHub API Token 可通过环境变量或本地文件提供：
 
@@ -262,12 +272,13 @@ Han1meViewer/
 ├── buildSrc/                     Gradle 构建辅助代码
 ├── gradle/libs.versions.toml     依赖版本目录
 ├── README.md                     项目说明
-└── README_TECH.md                历史技术说明与部分实现笔记
+├── README_TECH.md                技术架构与开发约定
+└── docs/CONVERSATION_MEMORY.md   版本演进、问题排查和维护记录
 ```
 
 ## 🤝 贡献说明
 
-- 提交代码前请先确认可以通过 `:app:compileDebugKotlin`。
+- 提交代码前请先确认可以通过 `:app:compileDebugKotlin` 和 `:app:testDebugUnitTest`。
 - 修改网络列表、分页或 Compose `Lazy*` 列表时，请检查重复 key 风险。
 - 修改播放、下载、账号、Cookie、Cloudflare、更新逻辑时，请尽量说明验证方式。
 - 提交共享关键 H 帧可参考 `.github/PULL_REQUEST_TEMPLATE/submit_h_keyframe.md`。

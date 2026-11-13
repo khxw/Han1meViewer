@@ -2,6 +2,8 @@
 
 本文档面向维护者和贡献者，描述当前项目的技术架构、关键模块、数据流和开发约定。用户侧介绍请看 [README.md](README.md)。
 
+> 适用版本：`2.1.150`（versionCode `261113255`）
+
 ## 1. 技术概览
 
 Han1meViewer 当前是以 Kotlin + Jetpack Compose 为主的 Android 应用，整体采用 MVVM 风格组织。
@@ -71,11 +73,11 @@ UI 层主要由 Compose 页面和组件组成。
 
 典型文件：
 
-- `ui/screen/home/HomePageScreen.kt`
+- `ui/screen/home/homepage/HomePageScreen.kt`
 - `ui/screen/search/SearchScreen.kt`
 - `ui/screen/video/VideoIntroductionScreen.kt`
 - `ui/screen/video/VideoRouteHostScreen.kt`
-- `ui/screen/home/download/DownloadScreen.kt`
+- `ui/screen/home/DownloadScreen.kt`
 - `ui/screen/home/myplaylist/MyPlayListScreen.kt`
 - `ui/component/VideoCardItem.kt`
 - `ui/component/lazy/AnimatedLazy.kt`
@@ -94,7 +96,8 @@ ViewModel 是页面状态和业务动作的入口。
 
 典型文件：
 
-- `ui/viewmodel/MainViewModel.kt`
+- `ui/screen/home/homepage/HomePageViewModel.kt`
+- `ui/viewmodel/AppViewModel.kt`
 - `ui/viewmodel/SearchViewModel.kt`
 - `ui/viewmodel/VideoViewModel.kt`
 - `ui/viewmodel/CommentViewModel.kt`
@@ -289,7 +292,7 @@ VideoRoute(videoCode = "-1", localUri) -> VideoViewModel.buildLocalPlayInfo -> H
 
 关键文件：
 
-- `ui/screen/home/download/DownloadScreen.kt`
+- `ui/screen/home/DownloadScreen.kt`
 - `ui/screen/home/download/DownloadingScreen.kt`
 - `ui/screen/home/download/DownloadedScreen.kt`
 - `ui/viewmodel/DownloadViewModel.kt`
@@ -396,10 +399,14 @@ Room 主要用于：
 - 手动 Cookie 输入用于绕过无法自动登录或 WebView 登录失败的情况。
 - Cloudflare 页面和拦截器用于处理访问保护导致的请求失败。
 - 账号信息修改、密码修改、头像上传都通过 `HanimeMyListService` 和 `NetworkRepo` 包装。
+- WebView 登录成功不能只看重定向是否为网站根地址；需要兼容 `/user/<id>/edit` 等受保护页面，并识别 `hanime1_session`、`laravel_session`、`remember_web_*`。
+- 打开登录页时不要清空全部 WebView Cookie，否则会一并丢失 Cloudflare 验证状态和已有会话。
+- Cloudflare 验证必须区分启动前已有的旧 `cf_clearance` 与本次新下发的值，旧值不能直接视为验证成功。
+- 手动导入 `cf_clearance` 时必须同时保存生成该 Cookie 的 User-Agent。
 
 ## 13. 公告系统
 
-公告源自托管在仓库根目录的 `announcements.json`，维护者提交/修改该文件即可发布或下架公告，无需外部服务权限。
+当前代码读取 `5APU-A340/Han1meViewer-Remastered` 仓库根目录的 `announcements.json`。本 Fork 根目录虽然也包含该文件，但修改它不会影响当前已构建应用；若要切换为自托管，需要同步修改 `Constants.kt` 中的 GitHub API 与 raw URL。
 
 关键文件：
 
@@ -538,13 +545,15 @@ entities
 - Java 21
 - Compose Compiler 插件随 Kotlin 版本
 - Release 默认启用混淆和资源压缩
-- Release 只打 `arm64-v8a` ABI split
-- APK 文件名格式：`Han1meViewer-v{versionName}.apk`
+- 默认 Release 生成 `arm64-v8a`、`armeabi-v7a`、`x86`、`x86_64` 四个 ABI 包和 `universal` 包
+- `-PfastBuild=true` 时只生成 `arm64-v8a`，用于日常快速迭代
+- APK 文件名格式：`Han1meViewer-v{versionName}-{abi}.apk` 或 `Han1meViewer-v{versionName}-universal.apk`
 
 本地常用验证：
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
+.\gradlew.bat :app:testDebugUnitTest
 .\gradlew.bat :app:assembleDebug
 ```
 
@@ -578,8 +587,9 @@ entities
 
 新增首页模块：
 
-- `HomePageScreen.kt`
-- `MainViewModel.kt`
+- `ui/screen/home/homepage/HomePageScreen.kt`
+- `ui/screen/home/homepage/HomePageViewModel.kt`
+- `ui/viewmodel/AppViewModel.kt`
 - `Parser.homePageVer2`
 - `HomePage` 相关 model
 
