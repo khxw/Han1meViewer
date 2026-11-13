@@ -1,8 +1,18 @@
 package com.yenaly.han1meviewer.ui.screen.home.download
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,16 +42,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.entity.download.DownloadGroupEntity
 import com.yenaly.han1meviewer.logic.entity.download.VideoWithCategories
 import com.yenaly.han1meviewer.logic.model.DownloadHeaderNode
 import com.yenaly.han1meviewer.logic.model.DownloadItemNode
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
+import com.yenaly.han1meviewer.ui.component.bottomNavReservedSpacing
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
@@ -82,13 +95,13 @@ fun DownloadedScreen(
         groups = uiState.displayGroups,
         onDismiss = { pendingRename = null },
         onConfirm = { header, newName ->
-            uiState.displayGroups.find { it.id == header.groupId }?.let { group ->
+            uiState.displayGroups.find { it.name == header.groupKey }?.let { group ->
                 onEvent(DownloadEvent.OnRenameGroup(group.id, newName))
             }
             pendingRename = null
         },
         onDelete = { header ->
-            uiState.displayGroups.find { it.id == header.groupId }
+            uiState.displayGroups.find { it.name == header.groupKey }
                 ?.let { onEvent(DownloadEvent.OnDeleteGroup(it)) }
             pendingRename = null
         },
@@ -115,15 +128,21 @@ fun DownloadedScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // 底部导航栏模式下为悬浮导航栏预留空间，保证列表末尾可滚至导航栏上方
+        val bottomNavReserved = if (Preferences.useBottomNavigation) {
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 112.dp
+        } else 0.dp
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(bottom = if (uiState.multiSelectMode) 72.dp else 8.dp),
+            contentPadding = PaddingValues(
+                bottom = (if (uiState.multiSelectMode) 72.dp else 8.dp) + bottomNavReserved
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(uiState.downloadedNodes, key = {
                 when (it) {
-                    is DownloadHeaderNode -> "header-${it.groupId}"
+                    is DownloadHeaderNode -> "header-${it.groupKey}"
                     is DownloadItemNode -> "item-${it.parentKey}-${it.data.video.id}"
                 }
             }) { node ->
@@ -131,9 +150,10 @@ fun DownloadedScreen(
                     is DownloadHeaderNode -> {
                         DownloadGroupHeader(
                             header = node,
-                            onToggle = { onEvent(DownloadEvent.OnToggleGroup(node.groupId)) },
+                            onToggle = { onEvent(DownloadEvent.OnToggleGroup(node.groupKey)) },
                             onRename = {
-                                if (node.groupId == DownloadGroupEntity.DEFAULT_GROUP_ID) {
+                                val group = uiState.displayGroups.find { it.name == node.groupKey }
+                                if (group?.id == DownloadGroupEntity.DEFAULT_GROUP_ID) {
                                     // 默认分组不可重命名
                                 } else if (!uiState.multiSelectMode) {
                                     pendingRename = node
@@ -183,7 +203,16 @@ fun DownloadedScreen(
             }
         }
 
-        if (uiState.multiSelectMode) {
+        AnimatedVisibility(
+            visible = uiState.multiSelectMode,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) { it } + fadeIn(animationSpec = tween(300)),
+            exit = slideOutVertically(
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            ) { it } + fadeOut(animationSpec = tween(300)),
+        ) {
             val selectedVideos = uiState.downloadedNodes
                 .filterIsInstance<DownloadItemNode>()
                 .filter { it.data.video.id in uiState.selectedVideoIds }
@@ -212,7 +241,6 @@ fun DownloadedScreen(
                         onEvent(DownloadEvent.OnBatchMoveRequest)
                     }
                 },
-                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }
@@ -221,7 +249,7 @@ fun DownloadedScreen(
         ConfirmDialog(
             visible = true,
             title = stringResource(R.string.delete),
-            message = stringResource(R.string.confirm_delete_videos, videos.size),
+            message = pluralStringResource(R.plurals.confirm_delete_videos, videos.size, videos.size),
             confirmText = stringResource(R.string.confirm),
             dismissText = stringResource(R.string.cancel),
             onConfirm = {
@@ -249,8 +277,10 @@ private fun BatchActionBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = bottomNavReservedSpacing())
             .navigationBarsPadding(),
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shape = RoundedCornerShape(16.dp),
         shadowElevation = 12.dp,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {

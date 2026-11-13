@@ -32,16 +32,12 @@
     <string name="collapse">折りたたむ</string>
     <string name="expand">展開する</string>
     <string name="series_video">シリーズ作品</string>
-    <string name="auto_play_next">自動再生</string>
     <string name="related_video">関連動画</string>
-    <string name="related_video_as_tab">関連動画をタブで表示</string>
-    <string name="related_video_as_tab_summary">再生ページの「あらすじ・コメント」の後に「関連動画」タブを追加します。タブレット横画面ではタブが右側に移動し、プレイヤーが縦方向の中央に配置されます</string>
     <string name="now_playing">再生中</string>
-    <string name="view_more_replies">返信%1$d件を表示</string>
-    <string name="comment_not_found">コメントはありません</string>
+<string name="comment_not_found">コメントはありません</string>
     <string name="hanime_list">新作リスト</string>
     <string name="latest_hanime_list_monthly">%s 裏アニメ新作リスト</string>
-    <string name="preview_page_updating_getchu_hint">現在、新作アニメ予告はありません。先に Getchu の新作予告を確認できます。Getchu へのアクセスには VPN が必要な場合があります。</string>
+    <string name="preview_page_updating_getchu_hint">サイト側で新作プレビューページを更新中です。先に Getchu の新作予告を確認できます。Getchu へのアクセスには VPN が必要な場合があります。</string>
     <string name="latest_hanime_comment">%s 新作コメント欄</string>
     <string name="view_getchu_preview">Getchu 予告を見る</string>
     <string name="getchu_preview">Getchu 新作予告</string>
@@ -52,70 +48,35 @@
     <string name="getchu_story">ストーリー</string>
     <string name="getchu_staff">スタッフ</string>
     <string name="my_list">マイリスト</string>
-    <string name="content_library">ライブラリ</string>
-    <string name="collapse_navigation">ナビゲーションを折りたたむ</string>
-    <string name="expand_navigation">ナビゲーションを展開</string>
-    <string name="quick_entries">クイックアクション</string>
-    <string name="profile_check_in_desc">毎日チェックインして報酬を獲得</string>
-    <string name="profile_creator_center_desc">投稿と創作データを管理</string>
-    <string name="profile_settings_desc">プレイヤー、ネットワーク、ダウンロード設定</string>
-    <string name="settings_pane_subtitle">自分の好みに合うように調整する</string>
-    <string name="settings_select_category_hint">左から設定カテゴリを選択</string>
-    <string name="settings_category_appearance">外観と操作</string>
-    <string name="settings_category_appearance_desc">テーマ、言語、レイアウトと表示</string>
-    <string name="settings_category_playback">再生</string>
-    <string name="settings_category_playback_desc">画質、プレーヤー、再生動作</string>
-    <string name="settings_category_network">ネットワーク</string>
-    <string name="settings_category_network_desc">ネットワーク、ディープリンク、接続</string>
-    <string name="settings_category_download">ダウンロード</string>
-    <string name="settings_category_download_desc">ダウンロード先とタスク動作</string>
-    <string name="settings_category_keyframes">キーフレーム</string>
-    <string name="settings_category_keyframes_desc">H キーフレームと共有キーフレーム</string>
-    <string name="settings_category_privacy">プライバシーとセキュリティ</string>
-    <string name="settings_category_privacy_desc">分析、アプリロック、偽装アイコン</string>
-    <string name="settings_category_data">データ</string>
-    <string name="settings_category_data_desc">バックアップ、復元、キャッシュ</string>
-    <string name="settings_category_about">このアプリについて</string>
-    <string name="settings_category_about_desc">アップデート、フィードバック、OSS ライセンス</string>
-    <string name="settings_group_interface">インターフェースとレイアウト</string>
-    <string name="settings_group_app">アプリ</string>
-    <string name="settings_group_backup">バックアップとストレージ</string>
-    <string name="settings_group_feedback">フィードバックとサポート</string>
-    <string name="settings_group_version">バージョン情報</string>
-    <string name="about_app_subtitle">Han1meViewer · Kotlin で開発された Android クライアント。hanime の公開動画コンテンツの閲覧、検索、再生、管理を行います。</string>
-    <string name="about_disclaimer_title">説明と免責事項</string>
-    <string name="about_disclaimer_origin_title">プロジェクトの出典とライセンス</string>
-    <string name="about_disclaimer_origin">本アプリには公式サイトがありません。GitHub Release と CI ビルドが唯一のダウンロードおよび更新チャネルです。hanime1.me およびその関連会社とは一切の提携、協力、許諾関係がありません。本プロジェクトは YenalyLiew/Han1meViewer から Fork したもので、元プロジェクトは Apache License 2.0 を採用しています。</string>
-    <string name="about_disclaimer_data_title">データと著作権</string>
-    <string name="about_disclaimer_data">本アプリは通常のネットワークリクエストと HTML DOM 解析によって公開ページの情報のみを取得します。サイトのバックエンドデータベースへのアクセス、インジェクション攻撃、認可の回避、非公開ユーザーデータの取得は行いません。動画、画像、テキストなどの著作権は元サイトまたは制作者・配信者に帰属します。</string>
-    <string name="about_disclaimer_region_title">利用制限と地域について</string>
-    <string name="about_disclaimer_region">本アプリは中国本土のユーザー向けには提供されておらず、VPN、クラック、ネットワーク制限の回避機能も提供しません。技術研究、学習、モバイル体験の最適化のみを目的とし、商業サービスではありません。ユーザーは地域の法令および対象サイトの規則を遵守してください。</string>
-    <string name="about_last_updated">最終更新：%1$s</string>
-    <string name="about_support_original">公式チャンネルを通じて元サイトを支援してください。</string>
-    <string name="about_app_info">アプリ情報</string>
-    <string name="about_build_type">ビルド種別</string>
-    <string name="about_build_commit">コミット</string>
-    <string name="about_package_name">パッケージ名</string>
-    <string name="about_current_site">現在のサイト</string>
-    <string name="about_android_version">Android バージョン</string>
-    <string name="about_device_model">デバイスモデル</string>
-    <string name="about_project_support">プロジェクトとサポート</string>
-    <string name="about_github_repo">GitHub リポジトリ</string>
-    <string name="about_github_repo_summary">ソースとリリースを見る</string>
-    <string name="about_easter_egg_toast">イースターエッグは準備中です。お楽しみに</string>
-    <string name="about_thanks">すべてのコントリビューターとユーザーに感謝します</string>
-    <string name="content_library_favorite_desc">お気に入り動画</string>
-    <string name="content_library_watch_later_desc">後で見る</string>
-    <string name="content_library_playlist_desc">カスタムプレイリスト</string>
-    <string name="content_library_history_desc">視聴履歴</string>
-    <string name="content_library_download_desc">オフライン保存</string>
-    <string name="content_library_pane_subtitle">お気に入り、履歴、オフラインコンテンツ</string>
     <string name="watch_later">後で見る</string>
     <string name="fav_video">お気に入り</string>
     <string name="settings">設定</string>
     <string name="video">動画</string>
+    <string name="playback">再生</string>
+    <string name="content_and_browse">コンテンツと閲覧</string>
+        <string name="content_filter">コンテンツフィルタ</string>
     <string name="download">ダウンロード</string>
     <string name="watch_history">視聴履歴</string>
+    <string name="local_favorite">ローカルお気に入り</string>
+    <string name="add_to_local_fav">ローカルお気に入りに追加</string>
+    <string name="local_favorite_added">保存済み</string>
+    <string name="local_favorite_empty_title">ローカルお気に入りはありません</string>
+    <string name="local_favorite_empty_description">動画ページの「ローカルお気に入りに追加」をタップしてオフライン保存できます</string>
+    <string name="local_favorite_saved_at">保存日時：%s</string>
+    <string name="local_favorite_delete_all_title">ローカルお気に入りをクリア</string>
+    <string name="sure_to_delete_all_local_favorites">すべてのローカルお気に入りをクリアしてもよろしいですか？</string>
+<string name="search_local_favorites">ローカルお気に入りを検索</string>
+    <string name="no_matching_local_favorites">一致するローカルお気に入りがありません</string>
+<string name="local_favorite_group_all">すべて</string>
+    <string name="local_favorite_group_ungrouped">未分類</string>
+    <string name="local_favorite_group_new">新しいグループ</string>
+    <string name="local_favorite_group_manage">グループ管理</string>
+    <string name="local_favorite_group_name_hint">グループ名</string>
+    <string name="local_favorite_group_duplicated">グループ名は既に存在します</string>
+    <string name="local_favorite_group_delete_confirm">「%s」内のお気に入りは未分類に移動されます</string>
+    <string name="local_favorite_group_empty">このグループにお気に入りはありません</string>
+    <string name="local_favorite_move_to_group">グループへ移動</string>
+    <string name="local_favorite_select_group">グループを選択</string>
     <string name="login">ログイン</string>
     <string name="delete">削除</string>
     <string name="here_is_empty">ここは空っぽ…</string>
@@ -123,6 +84,7 @@
     <string name="add_to_fav">お気に入り追加</string>
     <string name="share">共有</string>
     <string name="video_language">音声言語</string>
+    <string name="data_and_about">データと概要</string>
     <string name="about">アプリについて</string>
     <string name="check_update">更新確認</string>
     <string name="new_version_found">新しいバージョンが見つかりました</string>
@@ -137,20 +99,6 @@
     <string name="downloading_update_percent">更新ダウンロード中 %d%%</string>
     <string name="update_download_failed">更新のダウンロードに失敗しました</string>
     <string name="update_download_failed_unknown">更新のダウンロードに失敗しました。しばらくしてから再試行するか、GitHub Releases から手動でダウンロードしてください。</string>
-    <!-- 更新モジュールの具体的なエラー理由：従来の一律「更新失敗」を置き換える -->
-    <string name="update_error_rate_limited">GitHub のリクエスト回数が上限に達したため、現在は更新を確認できません。しばらくしてから再試行してください（GitHub Releases から手動でダウンロードすることもできます）。</string>
-    <string name="update_error_bad_credentials">更新確認に失敗しました：組み込みの GitHub トークンが無効か期限切れです。GitHub Releases から手動でダウンロードしてください。</string>
-    <string name="update_error_forbidden">更新確認に失敗しました：GitHub の更新 API にアクセスする権限がありません（ビルド成果物の権限が失効した可能性があります）。GitHub Releases から手動でダウンロードしてください。</string>
-    <string name="update_error_no_release">更新確認に失敗しました：利用可能なリリースまたはビルド成果物がありません。しばらくしてから再試行してください。</string>
-    <string name="update_error_server">更新確認に失敗しました：GitHub サーバーが一時的に応答していません（%s）。しばらくしてから再試行してください。</string>
-    <string name="update_error_network">更新確認に失敗しました：ネットワークエラーです（%s）。ネットワークまたはプロキシ設定を確認して再試行してください。</string>
-    <string name="update_error_download_rate_limited">更新のダウンロードに失敗しました：GitHub のリクエスト回数が上限に達しました。しばらくしてから再試行するか、GitHub Releases から手動でダウンロードしてください。</string>
-    <string name="update_error_download_bad_credentials">更新のダウンロードに失敗しました：組み込みの GitHub トークンが無効か期限切れです。GitHub Releases から手動でダウンロードしてください。</string>
-    <string name="update_error_download_artifact_expired">更新のダウンロードに失敗しました：対応するビルド成果物が期限切れ、または削除されています。正式版をご利用ください。</string>
-    <string name="update_error_download_client">更新のダウンロードに失敗しました：GitHub にリクエストを拒否されました（%s）。しばらくしてから再試行するか、GitHub Releases から手動でダウンロードしてください。</string>
-    <string name="update_error_download_server">更新のダウンロードに失敗しました：GitHub サーバーが一時的に応答していません（%s）。しばらくしてから再試行してください。</string>
-    <string name="update_error_download_network">更新のダウンロードに失敗しました：ネットワーク接続が中断されました（%s）。ネットワークを確認して再試行してください。</string>
-    <string name="update_error_download_invalid_payload">更新のダウンロードに失敗しました：取得したファイルが有効なパッケージではありません。しばらくしてから再試行するか、GitHub Releases から手動でダウンロードしてください。</string>
     <string name="downloaded">ダウンロード済み</string>
     <string name="cancel_download">ダウンロードキャンセル</string>
     <string name="local_playback">ローカル再生</string>
@@ -159,14 +107,14 @@
     <string name="reply">返信</string>
     <string name="reply_child_comment">子コメントに返信</string>
     <string name="login_first">まずログインしてください</string>
-    <string name="clear_cache">キャッシュクリア</string>
-    <string name="cache_usage_summary"><![CDATA[現在 <b>%1$s</b> の容量を使用中]]></string>
     <string name="allow">許可</string>
     <string name="deny">拒否</string>
     <string name="no_video_links_found">動画リンクが見つかりません</string>
     <string name="child_comment">子コメント</string>
     <string name="search_options_tips">ヒント：ユニットを長押しすると、そのユニットで選択したすべてのタグをクリアできます</string>
     <string name="continues">続ける</string>
+    <string name="continue_watching">続きを見る</string>
+    <string name="continue_watching_progress">%1$d%% 視聴済み</string>
     <string name="jump_to_webpage">ウェブページへ移動</string>
     <string name="quick_checkin">クイックチェックイン</string>
     <string name="sure_to_delete_s">%sを削除してもよろしいですか？</string>
@@ -176,8 +124,12 @@
     <string name="playlist_description">説明</string>
     <string name="add_to_playlist">リストに追加</string>
     <string name="player_settings">プレイヤー設定</string>
-    <string name="show_exit_confirm">終了確認</string>
-    <string name="show_exit_confirm_summary">有効にすると戻るボタンでアプリを終了する際に確認ダイアログが表示されます</string>
+    <string name="tablet_mode">タブレットモード</string>
+    <string name="tablet_mode_summary">有効にすると動画ページがタブレットレイアウトで表示され、より広い視聴エリアを提供します</string>
+        <string name="use_bottom_navigation">下部ナビゲーションバー</string>
+        <string name="use_bottom_navigation_summary">有効にするとメイン画面の下部にナビゲーションバーが表示され、ホーム・検索・ダウンロード・チェックイン・設定をすばやく切り替えられます</string>
+        <string name="compact_mode">コンパクトモード</string>
+        <string name="compact_mode_summary">カード間隔を狭め、グリッドの列数を増やして、1画面に多くのコンテンツを表示します</string>
     <string name="search_grid_columns_title">ビデオグリッド列数</string>
     <string name="search_grid_columns_summary">タブレットモードのみ有効。画面幅に応じて検索、後で見る、お気に入り動画、チャンネル登録ページの列数を調整します</string>
     <string name="search_grid_columns_dialog_hint">画面幅に応じてビデオグリッドの列数を設定</string>
@@ -186,16 +138,12 @@
     <string name="search_grid_columns_current_portrait">現在の縦向き</string>
     <string name="search_grid_columns_current_landscape">現在の横向き</string>
     <string name="current_slide_sensitivity">現在の感度：%s</string>
+    <string name="network">ネットワーク</string>
     <string name="proxy">プロキシ</string>
     <string name="port">ポート</string>
     <string name="direct">直接接続</string>
     <string name="system_proxy">システムプロキシ</string>
     <string name="host_or_ipv4">ホストまたはIPv4</string>
-    <string name="sort_by_date_ascending">日付順（古い順）</string>
-    <string name="sort_by_date_descending">日付順（新しい順）</string>
-    <string name="sort_by_alphabet_ascending">アルファベット順（A-Z）</string>
-    <string name="sort_by_alphabet_descending">アルファベット順（Z-A）</string>
-    <string name="search_downloaded_hint">ダウンロード済みを検索…</string>
     <string name="h_keyframe_settings">キーHフレーム設定</string>
     <string name="h_keyframes_enable">キーHフレームを有効化</string>
     <string name="h_keyframes_enable_tip">無効にしても履歴データは削除されません</string>
@@ -249,7 +197,7 @@
     <string name="custom_mirror_api_path_root">ルートドメインを使用</string>
     <string name="custom_mirror_api_path_root_summary">例: https://www.example.com/search。ホームページは常に上の入力どおりにリクエストされます</string>
     <string name="test_connection">接続テスト</string>
-    <string name="custom_mirror_site_testing">接続をテストしています…</string>
+    <string name="custom_mirror_site_testing">接続をテストしています...</string>
     <string name="custom_mirror_site_test_success">テスト成功\nホームページ: %1$s\n他のAPIテスト: %2$ssearch</string>
     <string name="custom_mirror_site_test_partial_success">ホームページのテストは成功しましたが、他のAPIテストに失敗しました\nホームページ: %1$s\n他のAPIベース: %2$s\n理由: %3$s</string>
     <string name="custom_mirror_site_test_failed">テスト失敗: %1$s</string>
@@ -259,9 +207,6 @@
     <string name="custom_mirror_site_watch_test_failed_http">search のテストに失敗しました: HTTP %1$d\nURL: %2$s</string>
     <string name="use_built_in_hosts">組み込みHostsを使用</string>
     <string name="network_settings">ネットワーク設定</string>
-    <string name="use_built_in_hosts_summary">アプリ提供のホストto IPマッピング\nカスタムHostsが設定されている場合は優先\nVPN？何それ？</string>
-    <string name="use_backup_media_cdn">予備メディアCDNを使用</string>
-    <string name="use_backup_media_cdn_summary">画像および動画のCDNホストを代替のものに切り替え、一部のネットワーク環境で主要なCDNが利用できない問題を解決します。</string>
     <string name="custom_hosts">カスタムHosts</string>
     <string name="custom_hosts_format">複数のIPをカンマ区切りで入力、例 1.2.3.4,5.6.7.8</string>
     <string name="custom_hosts_empty_summary">未設定（組み込みマッピングを使用）</string>
@@ -277,6 +222,15 @@
     <string name="doh_conflict_message">DoH と組み込み DNS マッピングは同時に有効化できません。どちらかを有効にすると、もう一方は自動で無効になります。</string>
     <string name="test_doh">DoHをテスト</string>
     <string name="test_doh_summary">現在のDoH設定でドメインを解決できるか確認します</string>
+    <string name="log_settings">ログ</string>
+    <string name="log_settings_summary">DNS解決とネットワークリクエストのログを表示して接続問題を調査します</string>
+    <string name="log_enable">ログを記録</string>
+    <string name="log_enable_summary">DNS解決とHTTPリクエスト結果（最新300件）を記録します。無効にしても既存ログは保持されます</string>
+    <string name="log_clear">クリア</string>
+    <string name="log_copy">コピー</string>
+    <string name="log_share">共有</string>
+    <string name="log_empty">ログはまだありません</string>
+    <string name="log_copied">クリップボードにコピーしました</string>
     <string name="doh_test_result">DoHテスト結果</string>
     <string name="password">パスワード</string>
     <string name="try_login_here">ここでログインしてみる</string>
@@ -303,6 +257,35 @@
     <string name="delete_playlist">プレイリスト削除</string>
     <string name="delete_the_playlist">このプレイリストを削除</string>
     <string name="detect_ha1_related_link_in_clipboard">クリップボードにHanime1関連リンクを検出</string>
+    <string name="clipboard_link_detect">クリップボードのリンク検出</string>
+    <string name="clipboard_link_detect_summary">有効にすると、クリップボード内のHanime動画リンクを検出して開くよう促します</string>
+    <string name="random_video">ランダム動画</string>
+    <string name="random_video_empty_title">条件に合う動画がありません</string>
+    <string name="random_video_empty_description">ブロックタグを変更するか、右上のシャッフルをお試しください</string>
+    <string name="block_tags_title">ランダム動画のブロックタグ</string>
+    <string name="block_tags_summary">有効にすると、ブロックタグ付き動画はランダム対象外になります</string>
+    <string name="blocked_tags_manage">ブロックタグ管理</string>
+<string name="blocked_tags_dialog_title">ブロックタグ管理</string>
+    <string name="blocked_tags_dialog_summary">ブロックするタグを追加します。有効にすると、これらのタグを含む動画はランダム対象外になります</string>
+    <string name="blocked_tags_empty">ブロックタグはまだありません</string>
+    <string name="blocked_tags_input_hint">タグ名を入力</string>
+    <string name="blocked_tags_duplicated">このタグはすでにブロック済みです</string>
+    <string name="block_keywords_title">タイトルキーワードブロック</string>
+    <string name="block_keywords_summary">オンにすると、タイトルにブロックしたキーワードを含む動画が検索・ホーム・ランダムから非表示になります</string>
+    <string name="blocked_keywords_manage">ブロックキーワード管理</string>
+<string name="blocked_keywords_dialog_title">ブロックキーワード管理</string>
+    <string name="blocked_keywords_dialog_summary">ブロックするキーワードを追加します。有効にすると、タイトルにこれらのキーワードを含む動画が非表示になります</string>
+    <string name="blocked_keywords_empty">ブロックキーワードはまだありません</string>
+    <string name="blocked_keywords_input_hint">キーワードを入力</string>
+    <string name="blocked_keywords_duplicated">このキーワードはすでにブロック済みです</string>
+        <string name="comment_keywords_title">コメントキーワードブロック</string>
+        <string name="comment_keywords_summary">オンにすると、ブロックしたキーワードを含むコメントがコメント欄から非表示になります</string>
+        <string name="blocked_comment_keywords_manage">コメントブロックキーワード管理</string>
+<string name="blocked_comment_keywords_dialog_title">コメントブロックキーワード管理</string>
+        <string name="blocked_comment_keywords_dialog_summary">ブロックするキーワードを追加します。オンにすると、これらのキーワードを含むコメントが非表示になります</string>
+        <string name="blocked_comment_keywords_empty">ブロックキーワードはまだありません</string>
+        <string name="blocked_comment_keywords_input_hint">キーワードを入力</string>
+        <string name="blocked_comment_keywords_duplicated">このキーワードはすでにブロック済みです</string>
     <string name="enter">入る</string>
     <string name="sure_to_logout">ログアウトしますか？</string>
     <string name="sure">はい</string>
@@ -336,10 +319,11 @@
     <string name="long_press_to_cancel_watch_later">長押しで後で見る解除！</string>
     <string name="delete_history">履歴削除</string>
     <string name="sure_to_delete_all_histories">すべての視聴履歴を削除しますか🤔</string>
-    <string name="long_press_to_delete_all_histories">長押しで履歴削除、右上の削除ボタンは全履歴削除用！</string>
-    <string name="watch_history_total_count">全 %1$d 件</string>
-    <string name="watch_history_delete_all_title">視聴履歴をすべて削除</string>
+    <string name="long_press_to_delete_all_histories">長押しで複数選択モードに入り履歴を一括削除、右上の削除ボタンは全履歴削除用！</string>
+<string name="watch_history_delete_all_title">視聴履歴をすべて削除</string>
     <string name="watch_history_clear_all">すべて削除</string>
+    <string name="search_watch_history">視聴履歴を検索</string>
+    <string name="no_matching_history">一致する履歴がありません</string>
     <string name="watch_history_empty_title">視聴履歴はまだありません</string>
     <string name="watch_history_empty_description">動画を再生すると、ここに履歴が表示されます。</string>
     <string name="watch_history_resume_watch">続けて視聴</string>
@@ -363,9 +347,6 @@
     <string name="creator_status_pending">処理待ち</string>
     <string name="creator_status_transcoding">変換中</string>
     <string name="speed">再生速度</string>
-    <string name="loop_play">ループ再生</string>
-    <string name="loop_play_on">ループ再生をオンにしました</string>
-    <string name="loop_play_off">ループ再生をオフにしました</string>
     <string name="cancel_thumb_up_success">高評価解除成功！</string>
     <string name="thumb_up_success">高評価成功！</string>
     <string name="cancel_thumb_down_success">低評価解除成功！</string>
@@ -377,7 +358,6 @@
     <string name="send_success">送信成功！</string>
     <string name="there_is_a_small_issue">問題が発生しました…</string>
     <string name="already_in_queue">キューに存在</string>
-    <string name="added_to_download_queue">ダウンロードキューに追加しました</string>
     <string name="s_view_times">%1$s回</string>
     <string name="liked">いいね済み</string>
     <string name="long_press_share_to_copy">共有を長押しでクリップボードにコピー</string>
@@ -390,10 +370,6 @@
     <string name="restart_or_not_working">%sの変更にはアプリ再起動が必要、否则无效！</string>
     <string name="sure_to_clear">クリアしますか？</string>
     <string name="sure_to_clear_cache">キャッシュをクリアしますか？</string>
-    <string name="clear_success">クリア成功</string>
-    <string name="clear_failed">クリア中に問題発生</string>
-    <string name="cache_empty">現在キャッシュは空、クリア不要</string>
-    <string name="d_speed_times">%.1f倍</string>
     <string name="high">高</string>
     <string name="moderately_high">やや高</string>
     <string name="moderate">中</string>
@@ -453,17 +429,16 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="sure_to_unsubscribe">フォロー解除しますか？</string>
     <string name="action_app_open_by_default_settings_not_support">この端末ではアプリからディープリンク設定を開くことはサポートされていません</string>
     <string name="sure_to_redownload">再ダウンロードしますか？</string>
-    <string name="analytics_summary">長押しで有効化が開発者にとっての重要性を確認</string>
-    <string name="analytics_title">利用状況統計</string>
-    <string name="privacy">プライバシー</string>
-    <string name="about_analytics_summary">開発者による端末情報と利用状況の収集に同意しますか？開発に大きく役立ちます。&lt;br&gt;&lt;br&gt;データ統計サービスは Google Analytics for Firebase により提供、プライバシーポリシーは &lt;a href=&quot;https://www.google.com/policies/privacy/&quot;&gt;https://www.google.com/policies/privacy/&lt;/a&gt; で確認可。&lt;br&gt;&lt;br&gt;データ統計に参加同意すると、端末情報とアプリ利用状況が記録されます。これには以下が含まれます（ただしこれらに限定されません）：Android APIバージョン、端末モデル、言語地域、アプリバージョン、セッション時間、アプリ機能使用回数。開発者は以下の情報が記録されないことを約束：電話番号、メールアドレス、IMEI。&lt;br&gt;&lt;br&gt;データ統計参加同意前は、情報は記録されません。&lt;br&gt;&lt;br&gt;記録されたデータは Google Analytics for Firebase により分析され、分析レポートは本アプリ開発者のみがアクセス可。</string>
-    <string name="about_analytics">利用状況統計について</string>
+    <string name="privacy">プライバシーとセキュリティ</string>
+    <string name="refresh_page_or_login_expired">ページを再読み込みしてみて\nログイン期限切れの可能性も</string>
     <string name="website_blocked_msg_2">サイトが強化された、別のドメインに変更すると効果があるかも！</string>
     <string name="website_blocked_msg_3">開発者に通知可、ただし急かさないで。サイト強化は開発者とは関係ありません～</string>
     <string name="action_not_support">この端末ではこの操作はサポートされていません</string>
     <string name="download_settings">ダウンロード設定</string>
     <string name="download_count_limit">同時ダウンロード数制限</string>
     <string name="download_speed_limit">ダウンロード速度制限</string>
+    <string name="download_wifi_only">Wi-Fiのみでダウンロード</string>
+    <string name="download_wifi_only_summary">Wi-Fi接続時のみダウンロードし、モバイルデータを節約します</string>
     <string name="no_limit">制限なし</string>
     <string name="check_video_exists_in_download">解像度 %s のこの動画はダウンロード済みのようです</string>
     <string name="retry">再試行</string>
@@ -477,7 +452,23 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="not_compact_lock_screen">お使いのOSバージョンはロック画面認証非対応、この機能は有効化不可</string>
     <string name="not_set_sys_lock">まずシステム設定で指紋、パターンまたはPINロックを有効化</string>
     <string name="usage_notice_title">利用上の注意</string>
-    <string name="usage_notice_content">🧩 本アプリは独立した第三者ツールであり、https://hanime1.me/ およびその関連者との間に、所属、提携、認可、推薦などの関係はありません。\n\n📢 本アプリを公開プラットフォームで宣伝、転載、誘導しないでください。それによりリスクが生じた場合、メンテナーはいつでもリポジトリをアーカイブまたは非公開にし、ビルド済みリリースを削除する可能性があります。\n\n🔍 本アプリは通常のネットワークリクエストと HTML DOM 解析により、対象サイトで公開表示されている情報のみを取得します。バックエンドデータベースへのアクセス、インジェクション攻撃、認可回避、非公開または個人情報の取得は行いません。\n\n⚖️ 本アプリは技術研究、モバイル体験の改善、学習交流のみを目的として提供され、商用サービスは提供しません。利用者は所在地の法律および対象サイトの規則を自ら遵守し、利用により生じる一切の結果を自己責任で負うものとします。\n\n©️ 元の動画、画像、文章および関連コンテンツの著作権は https://hanime1.me/ または原制作・配信元に帰属します。本アプリは著作権コンテンツを保存せず、原コンテンツを改変せず、いかなるコンテンツの所有権も主張しません。\n\n🛡️ 著作権、DMCA、誹謗中傷、その他コンテンツに関する申し立ては、直接ソースサイトの管理者へ連絡してください。本アプリ開発者はこれらのコンテンツ紛争を処理または支援できません。\n\nℹ️ 公式な方法で元サイトのコンテンツおよび運営者を支援することを推奨します。\n\n🔞 R18 警告：18 歳未満の方は本アプリのダウンロードおよび使用を禁止します。\n\n2026 年 6 月 1 日</string>
+    <string name="usage_notice_content">🧩 本アプリは独立した第三者ツールであり、https://hanime1.me/ およびその関連者との間に、所属、提携、認可、推薦などの関係はありません。
+
+📢 本アプリを公開プラットフォームで宣伝、転載、誘導しないでください。それによりリスクが生じた場合、メンテナーはいつでもリポジトリをアーカイブまたは非公開にし、ビルド済みリリースを削除する可能性があります。
+
+🔍 本アプリは通常のネットワークリクエストと HTML DOM 解析により、対象サイトで公開表示されている情報のみを取得します。バックエンドデータベースへのアクセス、インジェクション攻撃、認可回避、非公開または個人情報の取得は行いません。
+
+⚖️ 本アプリは技術研究、モバイル体験の改善、学習交流のみを目的として提供され、商用サービスは提供しません。利用者は所在地の法律および対象サイトの規則を自ら遵守し、利用により生じる一切の結果を自己責任で負うものとします。
+
+©️ 元の動画、画像、文章および関連コンテンツの著作権は https://hanime1.me/ または原制作・配信元に帰属します。本アプリは著作権コンテンツを保存せず、原コンテンツを改変せず、いかなるコンテンツの所有権も主張しません。
+
+🛡️ 著作権、DMCA、誹謗中傷、その他コンテンツに関する申し立ては、直接ソースサイトの管理者へ連絡してください。本アプリ開発者はこれらのコンテンツ紛争を処理または支援できません。
+
+ℹ️ 公式な方法で元サイトのコンテンツおよび運営者を支援することを推奨します。
+
+🔞 R18 警告：18 歳未満の方は本アプリのダウンロードおよび使用を禁止します。
+
+2026 年 6 月 1 日</string>
     <string name="usage_notice_accept">読んで同意しました</string>
     <string name="usage_notice_accept_countdown">あと %1$d 秒お読みください</string>
     <string name="usage_notice_decline">同意せず終了</string>
@@ -493,7 +484,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="subscribed_artists_count">フォロー中の作者（%1$d）</string>
     <string name="swipe_more">右へスワイプ</string>
     <string name="my_account">マイ</string>
-    <string name="account_profile">アカウント</string>
     <string name="username">ユーザー名</string>
     <string name="logout">ログアウト</string>
     <string name="change_avatar">アバターを変更</string>
@@ -511,7 +501,11 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="changing">変更中…</string>
     <string name="title_activity_qrcode_scanner">手動クッキー入力</string>
     <string name="scan_for_cookies">手動クッキー入力</string>
-    <string name="import_cookies_intro">このインポート方法はcloudflareによるログイン遮断も緩和可能\n1. ウェブ版ログイン後、Cookiesを取得（方法は問わず、携帯/PC可）。\n2. フォーマットは大体図の通り。注意！前後にダブルクォーテーションを含まず、フォーマット後のCookiesシーケンスではないこと。\n「手動インポート」ボタンを使用。\nインポート後ページ再読み込みで未ログイン状態の場合は、Cookiesを確認。</string>
+    <string name="import_cookies_intro">このインポート方法はcloudflareによるログイン遮断も緩和可能
+1. ウェブ版ログイン後、Cookiesを取得（方法は問わず、携帯/PC可）。
+2. フォーマットは大体図の通り。注意！前後にダブルクォーテーションを含まず、フォーマット後のCookiesシーケンスではないこと。
+「手動インポート」ボタンを使用。
+インポート後ページ再読み込みで未ログイン状態の場合は、Cookiesを確認。</string>
     <string name="cookies_import_desc">ガイド図</string>
     <string name="cookies_import_title">インポート方法</string>
     <string name="cookies_import_dismiss">了解</string>
@@ -621,21 +615,27 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="fault_prompt">エラー発生、開発者に連絡！</string>
     <string name="read_download_dir_title">ダウンロードディレクトリ読み込み</string>
     <string name="read_download_dir_message">現在のダウンロードディレクトリ内のダウンロード済みファイルを読み込み、リスト復元。\n各動画ユニットのファイル構造：\n[動画コード]/xxx.mp4、xxx.png、info.json</string>
-    <string name="reading_download_dir">読み込み中…</string>
-    <string name="import_result_title">読み込み完了</string>
-    <string name="import_success_count">%d個正常に読み込み</string>
-    <string name="import_fail_count">%d個失敗</string>
-    <string name="import_fail_reason_invalid_name">フォルダ名が無効</string>
-    <string name="import_fail_reason_missing_info">info.jsonがありません</string>
-    <string name="import_fail_reason_exception">読み取り・解析に失敗</string>
-    <string name="import_fail_suggestion">対象フォルダにinfo.jsonと動画ファイル（xxx.mp4、xxx.png）が含まれているか確認してください。ファイルの欠落や破損は読み込み失敗の原因になります。</string>
+    <string name="read_success">読み込み成功</string>
     <string name="select_custom_directory">まずカスタムディレクトリを選択</string>
     <string name="directory_saved">ディレクトリ保存済:%s</string>
     <string name="no_directory_selected">ディレクトリ未選択、変更なし</string>
     <string name="select_download_folder">ダウンロードフォルダ選択</string>
-    <string name="select_folder_message">システムファイルピッカーでフォルダを指定：\n\n✓ 保存場所を自由に選択\n✓ ダウンロードファイルを永続保存\n✓ 他アプリとの共有が簡単\n✓ アプリ削除後もファイルに影響なし\n✓ レジュームダウンロード対応\n\nこのフォルダを移動、名前変更、または権限解除しないでください。解除した場合は再選択が必要です。Downloads 配下の新規フォルダ、またはカスタムフォルダの利用を推奨します。</string>
+    <string name="select_folder_message">システムファイルピッカーでフォルダを指定：
+
+✓ 保存場所を自由に選択
+✓ ダウンロードファイルを永続保存
+✓ 他アプリとの共有が簡単
+✓ アプリ削除後もファイルに影響なし
+✓ レジュームダウンロード対応
+
+このフォルダを移動、名前変更、または権限解除しないでください。解除した場合は再選択が必要です。Downloads 配下の新規フォルダ、またはカスタムフォルダの利用を推奨します。</string>
     <string name="restore_default_path">デフォルト保存先に復元</string>
-    <string name="restore_default_message">アプリ内部ストレージに復元しますか？\n\n● 現在のダウンロードファイルは移動されない\n● 以降のダウンロードはアプリ内部に保存\n● アプリ削除でファイルも削除\n● 外部パス選択後、ファイル移行機能で移動可</string>
+    <string name="restore_default_message">アプリ内部ストレージに復元しますか？
+
+● 現在のダウンロードファイルは移動されない
+● 以降のダウンロードはアプリ内部に保存
+● アプリ削除でファイルも削除
+● 外部パス選択後、ファイル移行機能で移動可</string>
     <string name="default_path_restored">デフォルト保存先復元済</string>
     <string name="understood">了解</string>
     <string name="confirm_import">エクスポートしますか？</string>
@@ -675,12 +675,11 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="sort_by_replies">返信数順</string>
     <string name="sort_most_likes">高評価順</string>
     <string name="sort_most_dislikes">低評価順</string>
-    <string name="sort_comment">コメント並び順</string>
-    <string name="theme">テーマと外観</string>
     <string name="dark_theme">ダークテーマ</string>
     <string name="follow_system">システムに追随</string>
     <string name="always_off">常にオフ</string>
     <string name="always_on">常にオン</string>
+    <string name="always_amoled">AMOLED ブラック</string>
     <string name="category_instant_noodle">短編アニメ</string>
     <string name="category_motion_anime">動くイラスト</string>
     <string name="category_3d_animation">3D作品</string>
@@ -695,6 +694,7 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="save_image_confirm">画像を保存しますか？</string>
     <string name="super_resolution_off">オフ</string>
     <string name="super_resolution_performance">パフォーマンス優先</string>
+    <string name="super_resolution_balanced">バランス優先</string>
     <string name="super_resolution_quality">品質優先</string>
     <string name="advanced_search_combination">高度な検索組み合わせ</string>
     <string name="app_tampered">本アプリは悪意を持って改ざんされました！情報セキュリティにご注意ください！</string>
@@ -747,10 +747,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="search_artist_ignore_video_type_summary">有効にすると、詳細ページのアバターをクリックしてアーティストを検索する際、動画タイプが含まれなくなります。</string>
     <string name="show_played_indicator">再生状態マークを表示</string>
     <string name="show_played_indicator_summary">有効にすると、検索結果ページの動画カバー右上に再生済みマークが表示されます</string>
-    <string name="watched_progress_threshold">閲覧済みと判定する進捗しきい値</string>
-    <string name="watched_progress_threshold_summary">再生進捗がこの割合に達したら閲覧済みとしてマークします（現在：%1$d%%）</string>
-    <string name="search_pagination">ページネーション読み込み</string>
-    <string name="search_pagination_summary">有効にすると検索結果をページナビゲーションに切り替え、無効ならウォーターフォール無限読み込みを使用します</string>
     <string name="horizontal_card_count_title">横スクロール一覧の表示カード数</string>
     <string name="horizontal_card_count_summary">ホームや関連動画など、横スクロール一覧で一度に見えるカード数を調整します</string>
     <string name="horizontal_card_count_dialog_hint">画面幅ごとに、横スクロール一覧で一度に見えるカード数を設定します</string>
@@ -766,7 +762,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="ungrouped">未グループ化</string>
     <string name="create_new_group">新規グループ作成</string>
     <string name="create_group_success">作成成功！%s</string>
-    <string name="download_group_script_traditional">繁体字</string>
     <string name="disable_mobile_data_warning">モバイルデータ警告を無効化</string>
     <string name="disable_mobile_data_warning_summary">有効にすると、モバイルデータで再生時の警告が表示されません</string>
     <string name="mpv_socks5_warning">注意：MPV再生エンジンはSOCKSプロキシに対応しておらず、再生が失敗する可能性があります</string>
@@ -790,7 +785,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="version_check_failed">\n⚠️ バージョンチェック失敗</string>
     <string name="switch_site">サイト切替</string>
     <string name="confirm_switch_site">サイトを切り替えますか？</string>
-    <string name="disable_predictive_back_title">予測型バックアニメーションを無効化</string>
     <string name="play_trailer">予告編を再生</string>
     <string name="load_complete">読み込み完了！</string>
     <string name="search_video_hint">動画を検索…</string>
@@ -801,7 +795,12 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="more">もっと見る</string>
     <string name="announcement">お知らせ</string>
     <string name="announcement_list">お知らせ一覧</string>
+    <string name="no_announcement_available">お知らせはありません</string>
+    <string name="announcement_fetch_interval">お知らせ取得間隔</string>
+    <string name="announcement_fetch_interval_hours_format">%d 時間</string>
+    <string name="announcement_fetch_interval_off">取得しない（非推奨）</string>
     <string name="view_all">すべて表示</string>
+    <string name="open_menu">メニューを開く</string>
     <string name="permission_permanently_denied_title">権限が恒久的に拒否されました</string>
     <string name="storage_permission_settings_message">ダウンロード内容を保存するには、設定でストレージ権限を有効にしてください。</string>
     <string name="storage_permission_denied_toast">ストレージ権限がないとダウンロードを保存できません</string>
@@ -846,8 +845,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
         <item>検索して、ちょっとハレンチな新世界を開いちゃおう！</item>
     </string-array>
     <string name="theme_color">テーマカラー</string>
-    <string name="theme_color_preset_title">プリセット配色</string>
-    <string name="theme_color_preset_subtitle">アクセントカラーを選択</string>
     <string name="theme_color_system">システムに従う</string>
     <string name="theme_color_default">クリムゾンレッド</string>
     <string name="theme_color_blue">アズールブルー</string>
@@ -858,8 +855,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="theme_color_teal">ミントティール</string>
     <string name="theme_color_yellow">ゴールデンイエロー</string>
     <string name="theme_color_high_contrast">ハイコントラスト</string>
-    <string name="pure_black_dark_mode">ピュアブラック (OLED)</string>
-    <string name="pure_black_dark_mode_summary">ダークテーマで純黒の背景を使用し、OLED画面の消費電力を節約</string>
     <string name="restart_needed">プログラムを再起動する必要があります。そうしないと動作しません！</string>
     <string name="played">閲覧済み</string>
     <string name="local">ローカル</string>
@@ -868,8 +863,7 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="select_all">すべて選択</string>
     <string name="deselect_all">すべて選択解除</string>
     <string name="move_group">グループ移動</string>
-    <string name="confirm_delete_videos">%d 件の動画を削除してもよろしいですか？</string>
-    <string name="confirm_move_videos">%1$d 件の動画をグループ %2$s に移動してもよろしいですか？</string>
+<string name="confirm_move_videos">%1$d 件の動画をグループ %2$s に移動してもよろしいですか？</string>
     <string name="cloudflare_ip_block_warning">お客様のIPアドレスが日本に所在しているか、CloudFlareのブラックリストに登録されている可能性があります。これはアプリ自体の問題ではありません。CloudFlareはセキュリティ上の理由から、定期的に特定の高リスクIPアドレスをブロックします。別のVPNノードに切り替えるか、ネットワーク環境を変更してからもう一度お試しください。</string>
     <string name="cloudflare_network_mismatch">現在のネットワーク環境では検証を通過できません。内蔵hostsを利用してアクセスしている場合、CloudFlare検証ページはカスタムhostsによる名前解決をサポートしていないため、検証ノードとアプリ本体が異なるリージョンに解決され、アクセス環境が統一されず検証に失敗する可能性があります。この問題は現時点では解決できません。より「クリーンな」IPまたはネットワーク環境に切り替えてから再試行してください。</string>
     <string name="ssl_handshake_error">SSLセキュア接続に失敗しました。システム時刻の異常、ネットワークの傍受、または証明書検証の失敗が考えられます。時刻設定を確認し、別のネットワーク環境に切り替えてから再試行してください。</string>
@@ -896,13 +890,6 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
     <string name="home_category_layout_summary">%1$d / %2$d 件を表示中</string>
     <string name="home_category_layout_dialog_summary">項目を長押ししてドラッグすると順序を変更できます。スイッチをオフにすると非表示になります。</string>
     <string name="debug">デバッグ</string>
-    <string name="crash_title">ちょっとした問題が…</string>
-    <string name="crash_message">アプリが予期せぬエラーに遭遇しました。興奮しすぎたかも🥵\n再起動するか、開発者に報告してください～</string>
-    <string name="crash_restart">再起動！</string>
-    <string name="crash_close">ちょっと休憩</string>
-    <string name="crash_details">エラーの詳細</string>
-    <string name="crash_report">エラーを報告</string>
-    <string name="crash_copy">エラー内容をコピー</string>
     <string-array name="loading_hints">
         <item>ふん、べ、別に待たせてなんかいないわよ！ちょっとデータが走るの遅いだけなんだから！</item>
         <item>バカ！見つめたって早くならないわよ！……もう、あと3秒だけ待ちなさいよね！</item>
@@ -920,18 +907,244 @@ hanime1.me以外のドメインは、特定の時間帯にhanime1.meにリダイ
         <item>ワクワクしながら待機中……</item>
         <item>◝(⑅•ᴗ•⑅)◜..°♡ 転送中……</item>
     </string-array>
-    <string name="download_auto_group_created">グループが自動的に作成されました：%s</string>
-    <string name="download_group_title_from">グループ名の由来は</string>
-    <string name="download_group_title_from_video_title">動画タイトル</string>
-    <string name="download_group_title_from_series_name">シリーズ名</string>
-    <string name="download_group_name_quick_tc_sc_conversion">簡易・繁体字クイック変換</string>
-    <string name="group_name">グループ名</string>
-    <string name="download_auto_group">ダウンロード時に自動でシリーズグループを作成する</string>
-    <string name="download_auto_group_summary">有効にすると、動画のダウンロード時にシリーズ名でグループが自動作成されます。同名のグループがある場合は、それがそのまま再利用されます。</string>
-    <string name="download_auto_group_reuse">既存のグループを使用します：%s</string>
-    <string name="download_auto_group_create">新しいグループを作成します：%s</string>
-    <string name="download_group_script_simplified">簡体字</string>
-    <string name="meow">ニャー</string>
-    <string name="hiss">シャーッ</string>
-    <string name="growl">シャーッ</string>
+    <!-- v1.1.0 リマスター追加分 -->
+    <string name="about_remastered_desc">本アプリは Han1meViewer のコミュニティ・リマスター保守版です。独自の署名鍵とパッケージ名を使用し、原版の不具合を修正して継続的に保守しています。原作者およびそのサービスとは無関係です。</string>
+    <string name="about_repo">GitHub リポジトリ</string>
+    <string name="credits">クレジット</string>
+    <string name="credits_content">本リマスター版は misaka10032w/Han1meViewer（直接の上流）をベースにしています。同プロジェクトは原作者 Yenaly Liew 氏の YenalyLiew/Han1meViewer から Fork されたものです。原作者および各上流の貢献者に感謝します。本版は保守と互換性向上のみを目的としています。</string>
+    <string name="credits_upstream_repo">続編の原プロジェクト（misaka10032w/Han1meViewer）</string>
+    <string name="credits_original_repo">オリジナルプロジェクト（YenalyLiew/Han1meViewer）</string>
+    <string name="cf_reload">再読み込み</string>
+    <string name="cf_manual_import_entry">Cookie を取り込む</string>
+    <string name="cf_manual_import_title">Cloudflare Cookie を手動で取り込む</string>
+    <string name="cf_manual_import_desc">端末の WebView が古く（一部の HarmonyOS／旧 Android に多い）、アプリ内で Cloudflare 認証を完了できない場合は、PC または新しいブラウザで認証を済ませ、cf_clearance とそのブラウザの User-Agent を下に貼り付けてください。両者は必ずセットで使用します。</string>
+    <string name="cf_manual_cookie_label">cf_clearance の値または Cookie 全体</string>
+    <string name="cf_manual_cookie_hint">cf_clearance の値だけ、または cf_clearance= を含む Cookie 全体を貼り付けてください。</string>
+    <string name="cf_manual_ua_label">対応する User-Agent</string>
+    <string name="cf_manual_ua_hint">cf_clearance を生成したブラウザの User-Agent と一致している必要があります。一致しないと拒否されます。</string>
+    <string name="cf_paste_from_clipboard">クリップボードから貼り付け</string>
+    <string name="cf_manual_clear">クリア</string>
+    <string name="cf_manual_saved">手動認証情報を保存しました</string>
+    <string name="cf_manual_cleared">手動認証情報をクリアしました</string>
+    <string name="cf_manual_import_setting_title">Cloudflare 手動認証</string>
+    <string name="cf_manual_import_setting_summary">旧端末でアプリ内認証ができない場合、cf_clearance と User-Agent を手動で取り込みます</string>
+    <string name="favorite_poster_wall">お気に入りポスター</string>
+    <string name="favorite_poster_export">ポスターを保存</string>
+    <string name="favorite_poster_shuffle">シャッフル</string>
+    <string name="favorite_poster_saved">ポスターを保存しました</string>
+    <string name="favorite_poster_failed">ポスターの保存に失敗しました</string>
+    <string name="favorite_poster_empty">お気に入りがありません</string>
+    <string name="favorite_poster_hint">最近のお気に入りカバーからPNGを生成します</string>
+<string name="favorite_poster_footer">Han1meViewer · ローカルお気に入り</string>
+
+    <string name="auto_series">シリーズ</string>
+    <string name="auto_series_summary">ローカルのお気に入り、視聴履歴、ダウンロードから自動整理</string>
+    <string name="auto_series_empty_title">まとめられるシリーズはありません</string>
+    <string name="auto_series_empty_description">同じシリーズを2話以上保存・視聴・ダウンロードするとここに表示されます</string>
+<string name="auto_series_watched_count">%1$d/%2$d話視聴済み</string>
+    <string name="auto_series_missing_episodes">不足：%1$s</string>
+    <string name="auto_series_continue_episode">第%1$d話を続ける</string>
+    <string name="auto_series_completed">視聴完了</string>
+    <string name="auto_series_downloaded">ダウンロード済み</string>
+    <string name="auto_series_episode_format">第%1$d話</string>
+    <string name="tag_manager_title">タグマネージャー</string>
+    <string name="tag_manager_search_hint">タグを検索</string>
+    <string name="tag_manager_blocked">ブロック中</string>
+    <string name="tag_manager_catalog">タグ一覧（%1$d）</string>
+    <string name="comment_keyword_add_hint">ブロックキーワードを追加</string>
+    <string name="super_resolution_failed">超解像の設定に失敗しました。シェーダーとプレイヤーログを確認してください</string>
+    <string name="super_resolution_gpu_next_conflict">gpu-next は Anime4K に対応していません。MPV 設定で gpu-next を無効にしてください</string>
+    <string name="series_completion_wizard">補完ウィザード</string>
+    <string name="series_completion_summary">収録 %1$d 話、視聴済み %2$d 話、DL済み %3$d 話、不足 %4$d 話</string>
+    <string name="series_completion_missing">不足エピソード</string>
+    <string name="series_completion_none">不足エピソードはありません</string>
+    <string name="series_completion_mark_nonexistent">存在しない</string>
+    <string name="series_completion_ignored">存在しないとして登録済み</string>
+    <string name="series_completion_restore">復元</string>
+
+    <string name="interaction_settings">アニメーション</string>
+    <string name="interaction_settings_summary">ページ遷移と押下スケールを調整</string>
+    <string name="motion_settings">アニメーション</string>
+    <string name="motion_mode">アニメーション設定</string>
+    <string name="motion_mode_follow_system">システムに従う</string>
+    <string name="motion_mode_full">すべて表示</string>
+    <string name="motion_mode_reduced">アニメーションを減らす</string>
+    <string name="motion_mode_summary_follow_system">システムのアニメーション設定に従います</string>
+    <string name="motion_mode_summary_full">アプリ内アニメーションを常に表示します</string>
+    <string name="motion_mode_summary_reduced">ページ遷移と押下スケールを無効にします</string>
+    <string name="press_scale_enabled">押下スケール</string>
+    <string name="press_scale_enabled_summary">カードや設定項目を押したときに少し縮小します</string>
+    <string name="low_motion_mode">低モーション設定</string>
+    <string name="low_motion_mode_summary">アニメーションと押下スケールをまとめて無効にします</string>
+    <string name="random_video_options">ランダム範囲とフィルター</string>
+    <string name="random_video_source">ランダム元</string>
+    <string name="random_video_source_latest_hanime">最新裏番（すべて）</string>
+    <string name="random_video_source_short_episode">短編アニメ</string>
+    <string name="random_video_source_three_dcg">3D作品</string>
+    <string name="random_video_filters">除外条件</string>
+    <string name="random_video_exclude_watched">視聴済みを除外</string>
+    <string name="random_video_exclude_downloaded">ダウンロード済みを除外</string>
+    <string name="random_video_exclude_favorited">お気に入りを除外</string>
+    <string name="random_video_exclude_watched_short">視聴済み</string>
+    <string name="random_video_exclude_downloaded_short">DL済み</string>
+    <string name="random_video_exclude_favorited_short">お気に入り</string>
+    <string name="random_video_avoid_recent">直近の重複を避ける</string>
+    <string name="random_video_summary_with_source">ランダム元：%1$s</string>
+    <string name="random_video_summary_with_source_filters">ランダム元：%1$s · %2$s</string>
+    <string name="display_refresh_rate">画面リフレッシュレート</string>
+    <string name="display_refresh_rate_system">システムに従う</string>
+    <string name="display_refresh_rate_summary">このアプリのウィンドウにのみ適用されます。現在 %1$d Hz。温度、バッテリー、コンテンツによりシステムが調整する場合があります。</string>
+    <string name="display_refresh_rate_unavailable">この端末はリフレッシュレートの切り替えに対応していません</string>
+    <string name="download_auto_discovery">ローカルメディアライブラリを自動スキャン</string>
+    <string name="download_auto_discovery_summary">ローカルメディアライブラリを開いたとき新規・移動済み動画をスキャンします</string>
+    <string name="local_media_found_title">ローカルメディアを検出しました</string>
+    <string name="local_media_found_summary">新規：%1$d\n移動：%2$d\nフォルダ内に見つからない項目：%3$d（自動削除しません）</string>
+    <string name="local_media_preview_list">プレビュー：\n%1$s</string>
+    <string name="local_media_library">ローカルメディアライブラリ</string>
+    <string name="local_media_library_scan_unavailable">先にカスタム保存先を設定して許可してください</string>
+    <string name="local_media_library_no_changes">新規または移動された動画はありません</string>
+    <string name="local_media_library_import_complete">ローカルメディアライブラリを更新しました</string>
+    <string name="local_media_library_sources_count">アプリ %1$d · 端末動画 %2$d</string>
+    <string name="local_media_source_app_downloads">アプリのダウンロード</string>
+    <string name="local_media_source_app_downloads_empty">アプリでダウンロードまたは取り込んだ動画はありません</string>
+    <string name="local_media_source_device_videos">端末の動画</string>
+    <string name="local_media_source_device_videos_empty">端末内に動画が見つかりません</string>
+    <string name="local_media_permission_hint">タップして動画へのアクセスを許可すると、端末内の動画を表示できます</string>
+    <string name="local_media_device_badge">端末</string>
+    <string name="storage_manager">ストレージ管理</string>
+    <string name="storage_manager_summary">キャッシュ、ダウンロード、端末動画の使用量を確認し、無効な記録を整理</string>
+    <string name="storage_manager_total_used">集計済み使用量</string>
+    <string name="storage_manager_free_space">内部ストレージの空き %1$s</string>
+    <string name="storage_manager_app_data">アプリデータ</string>
+    <string name="storage_manager_cleanup_title">整理操作</string>
+    <string name="storage_manager_action_clean">整理</string>
+    <string name="storage_manager_action_scan">スキャン</string>
+    <string name="storage_manager_clear_cache">アプリキャッシュを削除</string>
+    <string name="storage_manager_scanning">ストレージをスキャン中…</string>
+    <string name="storage_manager_cache_cleared">アプリキャッシュを削除しました</string>
+<string name="storage_manager_operation_failed">操作に失敗しました：%1$s</string>
+    <string name="storage_manager_confirm_clear_invalid_title">無効な記録を削除</string>
+    <string name="storage_manager_confirm_clear_invalid_message">%1$d 件の無効なダウンロード記録を削除しますか？動画ファイルは削除されません。</string>
+    <string name="storage_manager_confirm_merge_duplicates_title">重複記録を統合</string>
+    <string name="storage_manager_confirm_merge_duplicates_message">%1$d 件の重複したダウンロード記録を整理しますか？各組で最も完全な記録を保持します。</string>
+    <string name="storage_manager_confirm_delete_orphans_title">孤立したフォルダを削除</string>
+    <string name="storage_manager_confirm_delete_orphans_message">データベースから参照されていない %1$d 個のダウンロードフォルダ（%2$s）を削除しますか？手動で追加した動画がないか確認してください。</string>
+    <!-- ネットワーク診断 -->
+    <string name="network_diagnostics">ネットワーク診断</string>
+    <string name="network_diagnostics_summary">DNS・本体サイト・動画回線の接続状態を確認</string>
+    <string name="network_diagnostics_run">再診断</string>
+    <string name="network_diagnostics_config_title">現在の設定</string>
+    <string name="network_diagnostics_result_title">検査結果</string>
+    <string name="network_diagnostics_conclusion_title">診断結果</string>
+    <string name="network_diagnostics_check_dns">DNS 解決（システム）</string>
+    <string name="network_diagnostics_check_main">本体サイト接続</string>
+    <string name="network_diagnostics_check_hosts">内蔵 Hosts IP 遅延</string>
+    <string name="network_diagnostics_check_doh">DNS 解決（DoH）</string>
+    <string name="network_diagnostics_check_cdn">動画回線の実測</string>
+    <string name="network_diagnostics_dns_failed">DNS 解決に失敗</string>
+    <string name="network_diagnostics_dns_polluted">汚染またはハイジャックが疑われるアドレスが含まれます</string>
+    <string name="network_diagnostics_connect_failed">接続失敗またはタイムアウト</string>
+    <string name="network_diagnostics_hosts_disabled">内蔵 Hosts が無効のためスキップ</string>
+    <string name="network_diagnostics_hosts_empty">利用可能な内蔵 IP がありません</string>
+    <string name="network_diagnostics_timeout">タイムアウト</string>
+    <string name="network_diagnostics_doh_disabled">DoH が無効のためスキップ</string>
+    <string name="network_diagnostics_doh_failed">DoH 解決に失敗</string>
+    <string name="network_diagnostics_cdn_no_sample">動画回線を評価できません：サンプルがありません</string>
+    <string name="network_diagnostics_bad_url">現在のドメインが無効です</string>
+    <string name="network_diagnostics_conclusion_dns_broken">DNS 解決と本体サイトの両方が失敗しました。現在のネットワークでは解決も接続もできません。</string>
+    <string name="network_diagnostics_conclusion_hosts_dead">本体サイトは接続できますが、内蔵 Hosts の IP がすべてタイムアウトしました。これらのアドレスは失効または遮断されています。</string>
+    <string name="network_diagnostics_conclusion_cdn_blocked">本体サイトは正常ですが、動画回線にまったく接続できません。内蔵 Hosts は本体ドメインのみで動画 CDN を含まないため、典型的な回線遮断です。</string>
+    <string name="network_diagnostics_conclusion_cdn_rejected">本体サイトも動画回線も到達可能で、CDN も応答しています。ステータスコードのみ異常であり、業務レベルの拒否（署名切れや参照元チェック）で、ネットワーク障害ではありません。</string>
+    <string name="network_diagnostics_conclusion_all_good">DNS・本体サイト・動画回線はすべて正常です。再生できない場合は別の再生カーネルをお試しください。</string>
+    <string name="network_diagnostics_conclusion_main_only">本体サイトは到達可能で、ドメインと回線は正常です。動画回線のサンプルは取得できませんでした。</string>
+    <string name="network_diagnostics_conclusion_partial">診断が不完全です。別のドメインやネットワークで再試行してください。</string>
+    <string name="network_diagnostics_suggest_check_network">提案：まずネットワークを確認するか、DoH を有効にしてください。</string>
+    <string name="network_diagnostics_suggest_renew_hosts">提案：内蔵 Hosts の IP を更新するか、DoH を使用してください。</string>
+    <string name="network_diagnostics_suggest_proxy">提案：プロキシを有効にしてください。回線遮断を回避できる唯一の方法です。（日本ノードは使用しないでください）</string>
+    <string name="network_diagnostics_suggest_switch_domain">提案：別のドメインに切り替えて再診断してください。</string>
+
+    <string name="network_diagnostics_running">診断中…</string>
+    <string name="network_diagnostics_enabled">有効</string>
+    <string name="network_diagnostics_disabled">無効</string>
+
+    <string name="network_diagnostics_cdn_sample_from">サンプル元：%1$s</string>
+    <string name="network_diagnostics_cdn_sample_download">ダウンロード履歴</string>
+    <string name="network_diagnostics_cdn_sample_history">視聴履歴</string>
+    <string name="network_diagnostics_cdn_rejected_business">回線は到達可能、要求は拒否</string>
+
+    <string name="network_diagnostics_cdn_sample_online">オンラインサンプル</string>
+    <string name="network_diagnostics_conclusion_cdn_no_sample">本体サイトには到達できますが、動画サンプルを取得できなかったため、動画回線を評価できません。</string>
+    <string name="network_diagnostics_suggest_play_then_retry">提案：まず本体サイトに接続できるようにし、任意の動画を再生してから再診断してください。</string>
+
+    <!-- 初回起動：内蔵 Hosts の自動有効化 -->
+    <string name="hosts_auto_enable_title">内蔵 Hosts を有効にする</string>
+    <string name="hosts_auto_enable_message">内蔵 Hosts は DNS 汚染を回避し、サイトへの接続成功率を高めます。\n\n有効にするにはアプリの再起動が必要です。後から「設定 → ネットワーク」でいつでも変更できます。\n\n今すぐ有効にして再起動しますか？</string>
+    <string name="hosts_auto_enable_confirm">有効にして再起動</string>
+    <string name="hosts_auto_enable_decline">後で</string>
+
+    <string name="network_diagnostics_conclusion_main_blocked">DNS 解決は正常ですが、本体サイトに接続できません。アドレスは引けるのに到達できないため、IP 遮断や SNI フィルタリングの典型です。</string>
+
+    <string name="network_diagnostics_suggest_enable_hosts">提案：まず内蔵 Hosts を有効にして再試行してください。</string>
+
+<string name="d_speed_times">%.1f倍</string>
+    <string name="cache_usage_summary"><![CDATA[現在 <b>%1$s</b> の容量を使用中]]></string>
+    <string name="local_media_library_scan">ローカルフォルダをスキャン</string>
+    <string name="random_video_refresh">シャッフルし直す</string>
+    <string name="theme">テーマと外観</string>
+    <string name="use_built_in_hosts_summary">アプリ提供のホストto IPマッピング\nカスタムHostsが設定されている場合は優先\nVPN？何それ？</string>
+    <string name="storage_manager_cache">アプリキャッシュ</string>
+    <string name="storage_manager_downloads">アプリのダウンロード</string>
+    <string name="storage_manager_device_videos">端末の動画</string>
+    <string name="storage_manager_clear_invalid">無効なダウンロード記録を削除</string>
+    <string name="storage_manager_merge_duplicates">重複したダウンロード記録を統合</string>
+    <string name="storage_manager_delete_orphans">孤立したフォルダを削除</string>
+    <string name="comment_keyword_blocking">コメントキーワードブロック</string>
+    <string name="network_diagnostics_cdn_unreachable">動画回線に接続できません</string>
+    <string name="network_diagnostics_suggest_proxy_if_video_fails">提案：動画が再生できない場合はプロキシを有効にしてください。</string>
+    <plurals name="view_more_replies">
+        <item quantity="other">返信%1$d件を表示</item>
+    </plurals>
+    <plurals name="local_favorite_total_count">
+        <item quantity="other">ローカルお気に入り %d 件</item>
+    </plurals>
+    <plurals name="sure_to_delete_selected_local_favorites">
+        <item quantity="other">選択した %1$d 件のローカルお気に入りを削除してもよろしいですか？</item>
+    </plurals>
+    <plurals name="blocked_tags_manage_summary">
+        <item quantity="other">%1$d 個のタグをブロック中</item>
+    </plurals>
+    <plurals name="blocked_keywords_manage_summary">
+        <item quantity="other">%1$d 個のキーワードをブロック中</item>
+    </plurals>
+    <plurals name="blocked_comment_keywords_manage_summary">
+        <item quantity="other">%1$d 個のキーワードをブロック中</item>
+    </plurals>
+    <plurals name="sure_to_delete_selected_histories">
+        <item quantity="other">選択した %1$d 件の履歴を削除してもよろしいですか？</item>
+    </plurals>
+    <plurals name="watch_history_total_count">
+        <item quantity="other">全 %1$d 件</item>
+    </plurals>
+    <plurals name="favorite_poster_count">
+        <item quantity="other">%1$d 件のお気に入り</item>
+    </plurals>
+    <plurals name="auto_series_episode_count">
+        <item quantity="other">全%1$d話</item>
+    </plurals>
+    <plurals name="storage_manager_invalid_cleared">
+        <item quantity="other">%1$d 件の無効な記録を削除しました</item>
+    </plurals>
+    <plurals name="storage_manager_duplicates_merged">
+        <item quantity="other">%1$d 件の重複記録を統合しました</item>
+    </plurals>
+    <plurals name="storage_manager_orphans_deleted">
+        <item quantity="other">%1$d 個の孤立フォルダを削除しました</item>
+    </plurals>
+    <plurals name="local_media_skipped">
+        <item quantity="other">メタデータのない %1$d フォルダをスキップしました</item>
+    </plurals>
+    <plurals name="confirm_delete_videos">
+        <item quantity="other">%d 件の動画を削除してもよろしいですか？</item>
+    </plurals>
+    <string name="morse_copy">コピー</string>
 </resources>

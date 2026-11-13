@@ -9,31 +9,45 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -47,7 +61,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.res.painterResource
@@ -55,28 +71,39 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.ReportReason
 import com.yenaly.han1meviewer.logic.model.VideoComments
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
+import com.yenaly.han1meviewer.ui.component.BottomNavAwareSnackbarHost
 import com.yenaly.han1meviewer.ui.component.CommentReplyBar
 import com.yenaly.han1meviewer.ui.component.CommentReportDialog
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.VideoCommentCard
+import com.yenaly.han1meviewer.ui.component.bottomNavReservedSpacing
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.fakeCommentList
+import com.yenaly.han1meviewer.util.isCommentBlocked
 import com.yenaly.han1meviewer.util.parseTimeStrToMinutes
 import com.yenaly.han1meviewer.util.safeSortedBy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(
+    ExperimentalLayoutApi::class,
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+)
 @Composable
 fun CommentScreen(
     modifier: Modifier = Modifier,
@@ -98,6 +125,8 @@ fun CommentScreen(
     initialFirstVisibleItemIndex: Int = 0,
     initialFirstVisibleItemScrollOffset: Int = 0,
     onCommentScrollChange: (Int, Int) -> Unit = { _, _ -> },
+    keyboardBottomInsetPx: Int = 0,
+    draftKey: String? = null,
 ) {
     val comments by commentsFlow.collectAsStateWithLifecycle()
     val state by commentStateFlow.collectAsStateWithLifecycle()
@@ -105,12 +134,52 @@ fun CommentScreen(
     val containerSize = LocalWindowInfo.current.containerSize
     val maxScreenWidth = containerSize.width.dp
 
-    var showSortSheet by rememberSaveable { mutableStateOf(false) }
+    var showKeywordSheet by rememberSaveable { mutableStateOf(false) }
     var replyingComment by remember { mutableStateOf<VideoComments.VideoComment?>(null) }
     var reportComment by remember { mutableStateOf<VideoComments.VideoComment?>(null) }
     var showCommentBar by rememberSaveable { mutableStateOf(false) }
+    // 回复栏是否展开。和 replyingComment 分开存：关掉回复栏时保留 replyingComment + replyText 作为草稿。
+    var showReplyBar by rememberSaveable { mutableStateOf(false) }
+    var blockedCommentKeywords by rememberSaveable {
+        mutableStateOf(Preferences.blockedCommentKeywords.toList().sorted())
+    }
+    var newBlockedCommentKeyword by rememberSaveable { mutableStateOf("") }
+    val blockedCommentKeywordSet = remember(blockedCommentKeywords) {
+        blockedCommentKeywords.toSet()
+    }
+    val commentBlockingEnabled = blockedCommentKeywordSet.isNotEmpty()
+    val persistCommentBlocking: (List<String>) -> Unit = { keywords ->
+        Preferences.preferenceSp.edit {
+            putBoolean(SettingsPreferenceKeys.COMMENT_KEYWORDS_ENABLED, keywords.isNotEmpty())
+            putString(
+                SettingsPreferenceKeys.BLOCKED_COMMENT_KEYWORDS,
+                keywords.filter { it.isNotBlank() }.joinToString(","),
+            )
+        }
+    }
+    val toggleBlockedCommentKeyword: (String) -> Unit = { rawKeyword ->
+        val keyword = rawKeyword.trim()
+        if (keyword.isNotEmpty()) {
+            val existing = blockedCommentKeywords.firstOrNull {
+                it.equals(keyword, ignoreCase = true)
+            }
+            val nextKeywords = if (existing == null) {
+                listOf(keyword) + blockedCommentKeywords
+            } else {
+                blockedCommentKeywords - existing
+            }
+            blockedCommentKeywords = nextKeywords
+            persistCommentBlocking(nextKeywords)
+        }
+    }
     var replyText by remember { mutableStateOf(TextFieldValue("")) }
-    var composeText by remember { mutableStateOf(TextFieldValue("")) }
+    val draftPreferenceKey = draftKey?.let { "comment_draft_$it" }
+    var composeText by remember(draftKey) {
+        val initialDraft = draftPreferenceKey
+            ?.let { Preferences.preferenceSp.getString(it, "").orEmpty() }
+            .orEmpty()
+        mutableStateOf(TextFieldValue(initialDraft))
+    }
     var selectedReasonIndex by remember { mutableIntStateOf(-1) }
     var latestReportMessage by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -119,10 +188,25 @@ fun CommentScreen(
         initialFirstVisibleItemIndex = initialFirstVisibleItemIndex,
         initialFirstVisibleItemScrollOffset = initialFirstVisibleItemScrollOffset,
     )
+    val showCommentFab by rememberCommentFabVisibility(listState)
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val imeBottomInsetPx = WindowInsets.ime.getBottom(density)
+    val sharedImeBottomInsetPx = ImeInsetState.keyboardBottomInsetPx.intValue
+    val effectiveKeyboardBottomInsetPx = if (sharedImeBottomInsetPx > 0) {
+        sharedImeBottomInsetPx
+    } else {
+        imeBottomInsetPx
+    }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val loginFirstText = stringResource(R.string.login_first)
     val commentTooShortText = stringResource(R.string.comment_too_short)
     val nestedScrollInterop = rememberNestedScrollInteropConnection()
+    DisposableEffect(Unit) {
+        onDispose {
+            ImeInsetState.keyboardBottomInsetPx.intValue = 0
+        }
+    }
     LaunchedEffect(reportMessageFlow) {
         reportMessageFlow.collect {
             latestReportMessage = it.text
@@ -132,10 +216,33 @@ fun CommentScreen(
         }
     }
 
-    val sortedComments = remember(comments, sortType) {
-        sortComments(comments, sortType)
+    LaunchedEffect(draftPreferenceKey, composeText.text) {
+        val key = draftPreferenceKey ?: return@LaunchedEffect
+        delay(500)
+        Preferences.preferenceSp.edit {
+            if (composeText.text.isBlank()) {
+                remove(key)
+            } else {
+                putString(key, composeText.text)
+            }
+        }
     }
-    val showCommentFab by rememberCommentFabVisibility(listState)
+
+    val sortedComments = remember(
+        comments,
+        sortType,
+        commentBlockingEnabled,
+        blockedCommentKeywordSet,
+    ) {
+        val filtered = comments.filterNot {
+            isCommentBlocked(
+                content = it.content,
+                enabled = commentBlockingEnabled,
+                keywords = blockedCommentKeywordSet,
+            )
+        }
+        sortComments(filtered, sortType)
+    }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -145,37 +252,76 @@ fun CommentScreen(
         }
     }
 
-    BackHandler(enabled = replyingComment != null || showCommentBar) {
-        replyingComment = null
-        replyText = TextFieldValue("")
+    BackHandler(enabled = showReplyBar || showCommentBar) {
+        // 只关闭输入栏，保留草稿：
+        // - 主评论草稿由 composeText 自动落盘（见 draftPreferenceKey）
+        // - 回复草稿 = replyText + replyingComment，关掉后再次点同一条评论的「回复」可以接着写
+        showReplyBar = false
         showCommentBar = false
-        composeText = TextFieldValue("")
+        keyboardController?.hide()
     }
 
-    if (showSortSheet) {
-        ModalBottomSheet(onDismissRequest = { showSortSheet = false }) {
+    if (showKeywordSheet) {
+        ModalBottomSheet(onDismissRequest = { showKeywordSheet = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp),
+                    .heightIn(max = 640.dp)
+                    .padding(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.sort_comment),
+                    text = stringResource(R.string.comment_keyword_blocking),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
-                CommentSortType.entries.forEach { type ->
-                    FilledTonalButton(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = newBlockedCommentKeyword,
+                        onValueChange = { newBlockedCommentKeyword = it },
+                        placeholder = { Text(stringResource(R.string.comment_keyword_add_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
                         onClick = {
-                            onSortChange(type)
-                            showSortSheet = false
+                            toggleBlockedCommentKeyword(newBlockedCommentKeyword)
+                            newBlockedCommentKeyword = ""
                         },
+                        enabled = newBlockedCommentKeyword.isNotBlank(),
+                    ) {
+                        Text(stringResource(R.string.add))
+                    }
+                }
+                if (blockedCommentKeywords.isNotEmpty()) {
+                    FlowRow(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .heightIn(min = 72.dp, max = 280.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(sortText(type))
+                        blockedCommentKeywords.forEach { keyword ->
+                            AssistChip(
+                                onClick = { toggleBlockedCommentKeyword(keyword) },
+                                label = { Text(keyword) },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = stringResource(R.string.remove),
+                                        modifier = Modifier.padding(start = 4.dp),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -205,11 +351,11 @@ fun CommentScreen(
 
     Scaffold(
         modifier = modifier.widthIn(max = maxScreenWidth),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { BottomNavAwareSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             if (isAlreadyLogin) {
                 AnimatedVisibility(
-                    visible = showCommentFab && replyingComment == null && !showCommentBar,
+                    visible = showCommentFab && !showReplyBar && !showCommentBar,
                     enter = fadeIn() + slideInVertically { it / 2 },
                     exit = fadeOut() + slideOutVertically { it / 2 },
                 ) {
@@ -221,6 +367,7 @@ fun CommentScreen(
                                 contentDescription = null,
                             )
                         },
+                        modifier = Modifier.padding(bottom = bottomNavReservedSpacing()),
                         onClick = { showCommentBar = true },
                     )
                 }
@@ -279,23 +426,12 @@ fun CommentScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .nestedScroll(nestedScrollInterop),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                            // 评论列表禁用入场动画：
+                            // item 滚出可视区回收后再滚回会重播动画，造成滚动抽搐
+                            enableItemAnimation = false,
+                            contentPadding = PaddingValues(start = 8.dp, top = 56.dp, end = 8.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            if (sortedComments.size >= 3) {
-                                item {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                                        horizontalArrangement = Arrangement.End,
-                                    ) {
-                                        FilledTonalButton(onClick = { showSortSheet = true }) {
-                                            Text(sortText(sortType))
-                                        }
-                                    }
-                                }
-                            }
 
                             items(sortedComments, key = { it.stableKey }) { comment ->
                                 VideoCommentCard(
@@ -308,7 +444,12 @@ fun CommentScreen(
                                                 )
                                             }
                                         } else {
+                                            // 换了回复目标就清空旧草稿，避免把写给别人的内容发错人
+                                            if (replyingComment?.stableKey != comment.stableKey) {
+                                                replyText = TextFieldValue("")
+                                            }
                                             replyingComment = comment
+                                            showReplyBar = true
                                         }
                                     },
                                     onThumbUp = {
@@ -355,12 +496,31 @@ fun CommentScreen(
                     }
                 }
             }
+            if (comments.isNotEmpty()) {
+                FilledTonalButton(
+                    onClick = { showKeywordSheet = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 12.dp),
+                ) {
+                    Text(stringResource(R.string.comment_keyword_blocking))
+                }
+            }
             AnimatedVisibility(
-                visible = replyingComment != null || showCommentBar,
+                visible = showCommentBar || (replyingComment != null && showReplyBar),
                 modifier = Modifier
-                    .align(Alignment.BottomCenter),
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        bottom = if (effectiveKeyboardBottomInsetPx > 0) {
+                            with(LocalDensity.current) {
+                                effectiveKeyboardBottomInsetPx.toDp()
+                            }
+                        } else {
+                            bottomNavReservedSpacing()
+                        },
+                    ),
+                enter = fadeIn(),
+                exit = fadeOut(),
             ) {
                 if (replyingComment != null) {
                     CommentReplyBar(
@@ -374,6 +534,8 @@ fun CommentScreen(
                                 replyingComment?.let { onReply(it, replyText.text) }
                                 replyingComment = null
                                 replyText = TextFieldValue("")
+                                showReplyBar = false
+                                keyboardController?.hide()
                             }
                         },
                         placeholder = stringResource(R.string.comment),
@@ -388,8 +550,12 @@ fun CommentScreen(
                                 scope.launch { snackbarHostState.showSnackbar(commentTooShortText) }
                             } else {
                                 onComposeComment(text)
+                                draftPreferenceKey?.let { key ->
+                                    Preferences.preferenceSp.edit { remove(key) }
+                                }
                                 showCommentBar = false
                                 composeText = TextFieldValue("")
+                                keyboardController?.hide()
                             }
                         },
                         placeholder = stringResource(R.string.comment),

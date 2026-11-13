@@ -25,7 +25,6 @@ data class PlaylistUiState(
     val isLoadingMore: Boolean = false,
     val noMorePlaylists: Boolean = false,
     val playlistPage: Int = 1,
-    val totalPages: Int = 1,
 )
 
 /**
@@ -37,9 +36,6 @@ sealed interface PlaylistEvent {
 
     /** 加载更多播放列表 */
     data object OnLoadMore : PlaylistEvent
-
-    /** 跳到指定页 */
-    data class OnGoToPage(val page: Int) : PlaylistEvent
 
     /** 点击播放列表 → 打开详情弹窗 */
     data class OnPlaylistClick(val listCode: String, val title: String) : PlaylistEvent
@@ -62,7 +58,7 @@ sealed interface PlaylistEvent {
 data class PlaylistSheetCallbacks(
     val loadItems: (page: Int, listCode: String, refresh: Boolean) -> Unit,
     val modifyPlaylist: (listCode: String, title: String, desc: String, delete: Boolean) -> Unit,
-    val deleteFromPlaylist: (itemId: String, position: Int) -> Unit,
+    val deleteFromPlaylist: (listCode: String, videoCode: String, position: Int) -> Unit,
     val updateScrollState: (listCode: String, firstVisibleIndex: Int, scrollOffset: Int) -> Unit,
     val getScrollState: (listCode: String) -> Pair<Int, Int>,
     val onLoadPlaylists: () -> Unit,

@@ -21,6 +21,8 @@ data class VideoComments(
         val content: String,
         // 點讚數量，登入前不能憑藉post獲取
         var thumbUp: Int? = null,
+        // 點踩數量，登入前不能憑藉post獲取
+        var thumbDown: Int? = null,
         // 是否为子评论
         val isChildComment: Boolean,
         // 是否有更多回覆
@@ -48,28 +50,50 @@ data class VideoComments(
                 append(content.hashCode())
             }
         val realLikesCount get() = thumbUp
+        val realDislikesCount get() = thumbDown
+
+        /**
+         * 点赞 / 取消点赞。
+         *
+         * 站点是「赞 / 踩」二选一：点赞时如果之前点过踩，要把踩数也减 1。
+         */
         fun incLikesCount(cancel: Boolean = false): VideoComment {
-            return thumbUp?.let {
-                copy(
-                    thumbUp = it + if (cancel) -1 else 1,
-                    post = post.copy(
-                        likeCommentStatus = !cancel,
-                        unlikeCommentStatus = false
-                    )
+            if (thumbUp == null && thumbDown == null) return this
+            val wasDisliked = post.unlikeCommentStatus
+            return copy(
+                thumbUp = ((thumbUp ?: 0) + if (cancel) -1 else 1).coerceAtLeast(0),
+                thumbDown = if (!cancel && wasDisliked) {
+                    (thumbDown ?: 0).minus(1).coerceAtLeast(0)
+                } else {
+                    thumbDown
+                },
+                post = post.copy(
+                    likeCommentStatus = !cancel,
+                    unlikeCommentStatus = false
                 )
-            } ?: this
+            )
         }
 
+        /**
+         * 点踩 / 取消点踩。
+         *
+         * 点踩时如果之前点过赞，要把赞数也减 1。
+         */
         fun decLikesCount(cancel: Boolean = false): VideoComment {
-            return thumbUp?.let {
-                copy(
-                    thumbUp = it - if (cancel) -1 else 1,
-                    post = post.copy(
-                        likeCommentStatus = false,
-                        unlikeCommentStatus = !cancel
-                    )
+            if (thumbUp == null && thumbDown == null) return this
+            val wasLiked = post.likeCommentStatus
+            return copy(
+                thumbDown = ((thumbDown ?: 0) + if (cancel) -1 else 1).coerceAtLeast(0),
+                thumbUp = if (!cancel && wasLiked) {
+                    (thumbUp ?: 0).minus(1).coerceAtLeast(0)
+                } else {
+                    thumbUp
+                },
+                post = post.copy(
+                    likeCommentStatus = false,
+                    unlikeCommentStatus = !cancel
                 )
-            } ?: this
+            )
         }
 
         data class POST(

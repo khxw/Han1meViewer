@@ -12,7 +12,8 @@ import com.yenaly.han1meviewer.logic.model.Playlists
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel.csrfToken
-import com.yenaly.han1meviewer.base.BaseViewModel
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.base.YenalyViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PlaylistSubViewModel(application: Application) : BaseViewModel(application) {
+class PlaylistSubViewModel(application: Application) : YenalyViewModel(application) {
 
     var playlistPage = 1
     var playlistCode: String? = null
@@ -56,7 +57,7 @@ class PlaylistSubViewModel(application: Application) : BaseViewModel(application
                 if (prev is PageLoadingState.Loading) _playlistFlow.value = emptyList()
                 _playlistFlow.update { prevList ->
                     when (state) {
-                        is PageLoadingState.Success -> (prevList + state.info.hanimeInfo)
+                        is PageLoadingState.Success -> (prevList + markWatchedList(state.info.hanimeInfo))
                             .distinctBy(HanimeInfo::videoCode)
                         is PageLoadingState.Loading -> emptyList()
                         else -> prevList
@@ -69,9 +70,9 @@ class PlaylistSubViewModel(application: Application) : BaseViewModel(application
     private val _deleteFromPlaylistFlow = MutableSharedFlow<WebsiteState<Int>>()
     val deleteFromPlaylistFlow = _deleteFromPlaylistFlow.asSharedFlow()
 
-    fun deleteFromPlaylist(itemId: String, position: Int) {
+    fun deleteFromPlaylist(listCode: String, videoCode: String, position: Int) {
         viewModelScope.launch {
-            NetworkRepo.deleteMyListItems(itemId, position, csrfToken).collect {
+            NetworkRepo.deleteMyListItems(listCode, videoCode, position, csrfToken).collect {
                 _deleteFromPlaylistFlow.emit(it)
                 _playlistFlow.update { prevList ->
                     if (it is WebsiteState.Success) {

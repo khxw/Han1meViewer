@@ -1,8 +1,9 @@
 package com.yenaly.han1meviewer.ui.adapter
 
 import android.content.Context
+import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.text.input.KeyboardType
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import cn.jzvd.JZUtils
 import com.chad.library.adapter4.BaseQuickAdapter
@@ -11,10 +12,9 @@ import com.google.android.material.button.MaterialButton
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.ui.activity.MainActivity
-import com.yenaly.han1meviewer.ui.component.GlobalDialogs
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.han1meviewer.ui.component.TextInputField
-import com.yenaly.han1meviewer.util.findActivityOrNull
+import com.yenaly.han1meviewer.util.showAlertDialog
+import com.yenaly.yenaly_libs.utils.showShortToast
+import java.util.Locale
 
 /**
  * @project Han1meViewer
@@ -87,58 +87,52 @@ class HKeyframeRvAdapter(
                     val position = viewHolder.bindingAdapterPosition
                     val item = getItem(position)
 
-                    GlobalDialogs.show(
-                        GlobalDialogs.InputRequest(
-                            title = context.getString(R.string.modify_h_keyframe),
-                            fields = listOf(
-                                TextInputField(
-                                    label = context.getString(R.string.position_ms),
-                                    initialValue = item.position.toString(),
-                                    keyboardType = KeyboardType.Number,
-                                ),
-                                TextInputField(
-                                    label = context.getString(R.string.prompt),
-                                    initialValue = item.prompt.orEmpty(),
-                                ),
-                            ),
-                            confirmText = context.getString(R.string.confirm),
-                            dismissText = context.getString(R.string.cancel),
-                            onConfirm = { values ->
-                                val pos = values.getOrElse(0) { item.position.toString() }
-                                    .toLongOrNull() ?: item.position
-                                val prompt = values.getOrElse(1) { item.prompt.orEmpty() }
-                                context.findActivityOrNull<MainActivity>()?.let { activity ->
-                                    activity.viewModel.modifyHKeyframe(
+                    val view = View.inflate(context, R.layout.dialog_modify_h_keyframe, null)
+                    val etPrompt = view.findViewById<TextView>(R.id.et_prompt)
+                    val etPosition = view.findViewById<TextView>(R.id.et_position)
+                    etPrompt.text = item.prompt
+                    // 显式指定 Locale：避免不同语言环境下数字格式差异导致回读解析失败
+                    etPosition.text = String.format(Locale.US, "%d", item.position)
+
+                    context.showAlertDialog {
+                        setTitle(R.string.modify_h_keyframe)
+                        setView(view)
+                        setPositiveButton(R.string.confirm) { _, _ ->
+                            val prompt = etPrompt.text.toString()
+                            val pos = etPosition.text.toString().toLong()
+                            when (context) {
+                                is MainActivity -> {
+                                    context.viewModel.modifyHKeyframe(
                                         videoCode, item, HKeyframeEntity.Keyframe(
                                             position = pos,
                                             prompt = prompt
                                         )
                                     )
-                                    GlobalToasts.show(context.getString(R.string.modify_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                                     showShortToast(R.string.modify_success)
                                 }
-                            },
-                        )
-                    )
+                            }
+                        }
+                        setNegativeButton(R.string.cancel, null)
+                    }
                 }
             }
             viewHolder.getView<MaterialButton>(R.id.btn_delete).apply {
                 setOnClickListener {
                     val position = viewHolder.bindingAdapterPosition
                     val item = getItem(position)
-                    GlobalDialogs.show(
-                        GlobalDialogs.ConfirmRequest(
-                            title = context.getString(R.string.sure_to_delete),
-                            message = JZUtils.stringForTime(item.position),
-                            confirmText = context.getString(R.string.confirm),
-                            dismissText = context.getString(R.string.cancel),
-                            onConfirm = {
-                                context.findActivityOrNull<MainActivity>()?.let { activity ->
-                                    activity.viewModel.removeHKeyframe(videoCode, item)
-                                    GlobalToasts.show(context.getString(R.string.delete_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                    it.context.showAlertDialog {
+                        setTitle(R.string.sure_to_delete)
+                        setMessage(JZUtils.stringForTime(item.position))
+                        setPositiveButton(R.string.confirm) { _, _ ->
+                            when (context) {
+                                is MainActivity -> {
+                                    context.viewModel.removeHKeyframe(videoCode, item)
+                                     showShortToast(R.string.delete_success)
                                 }
-                            },
-                        )
-                    )
+                            }
+                        }
+                        setNegativeButton(R.string.cancel, null)
+                    }
                 }
             }
         }

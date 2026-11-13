@@ -19,8 +19,8 @@ data class DownloadSettingsUiState(
     val downloadCountLimitSummary: String,
     val downloadSpeedLimitIndex: Int,
     val downloadSpeedLimitSummary: String,
-    val downloadAutoGroup: Boolean = true,
-    val collapseDownloadedGroup: Boolean = false,
+    val downloadWifiOnly: Boolean,
+    val autoDiscoveryEnabled: Boolean,
 )
 
 @Composable
@@ -33,8 +33,8 @@ fun DownloadSettingsScreen(
     onImportDownloadedFiles: () -> Unit,
     onDownloadCountLimitChange: (Int) -> Unit,
     onDownloadSpeedLimitChange: (Int) -> Unit,
-    onDownloadAutoGroupChange: (Boolean) -> Unit,
-    onCollapseDownloadedGroupChange: (Boolean) -> Unit,
+    onDownloadWifiOnlyChange: (Boolean) -> Unit,
+    onAutoDiscoveryEnabledChange: (Boolean) -> Unit,
 ) {
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
@@ -82,21 +82,21 @@ fun DownloadSettingsScreen(
 
         item {
             SettingSwitchItem(
-                title = stringResource(R.string.download_auto_group),
-                summary = stringResource(R.string.download_auto_group_summary),
-                checked = state.downloadAutoGroup,
-                iconRes = R.drawable.ic_baseline_fold_24,
-                onCheckedChange = onDownloadAutoGroupChange,
+                title = stringResource(R.string.download_auto_discovery),
+                summary = stringResource(R.string.download_auto_discovery_summary),
+                checked = state.autoDiscoveryEnabled,
+                iconRes = R.drawable.baseline_screen_rotation_24,
+                onCheckedChange = onAutoDiscoveryEnabledChange,
             )
         }
 
         item {
             SettingSwitchItem(
-                title = stringResource(R.string.collapse_downloaded_groups),
-                summary = stringResource(R.string.collapse_downloaded_groups_summary),
-                checked = state.collapseDownloadedGroup,
-                iconRes = R.drawable.ic_baseline_fold_24,
-                onCheckedChange = onCollapseDownloadedGroupChange,
+                title = stringResource(R.string.download_wifi_only),
+                summary = stringResource(R.string.download_wifi_only_summary),
+                checked = state.downloadWifiOnly,
+                iconRes = R.drawable.baseline_mobile_data_24,
+                onCheckedChange = onDownloadWifiOnlyChange,
             )
         }
     }
@@ -113,8 +113,8 @@ private fun DownloadSettingsScreenPreview() {
                 downloadCountLimitSummary = "2",
                 downloadSpeedLimitIndex = 0,
                 downloadSpeedLimitSummary = "无限制",
-                downloadAutoGroup = true,
-                collapseDownloadedGroup = false,
+                downloadWifiOnly = false,
+                autoDiscoveryEnabled = true,
             ),
             maxDownloadCountLimit = 10,
             maxDownloadSpeedLimitIndex = 5,
@@ -123,8 +123,8 @@ private fun DownloadSettingsScreenPreview() {
             onImportDownloadedFiles = {},
             onDownloadCountLimitChange = {},
             onDownloadSpeedLimitChange = {},
-            onDownloadAutoGroupChange = {},
-            onCollapseDownloadedGroupChange = {},
+            onDownloadWifiOnlyChange = {},
+            onAutoDiscoveryEnabledChange = {},
         )
     }
 }

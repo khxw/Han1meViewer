@@ -13,12 +13,10 @@ import com.yenaly.han1meviewer.logic.model.VideoComments
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.screen.video.CommentSortType
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel.csrfToken
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.util.loadAssetAs
-import com.yenaly.han1meviewer.base.BaseViewModel
-import com.yenaly.han1meviewer.util.applicationContext
-import com.yenaly.han1meviewer.util.unsafeLazy
-import kotlinx.coroutines.Job
+import com.yenaly.yenaly_libs.base.YenalyViewModel
+import com.yenaly.yenaly_libs.utils.showShortToast
+import com.yenaly.yenaly_libs.utils.unsafeLazy
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,7 +29,7 @@ import kotlinx.coroutines.launch
  * @author Yenaly Liew
  * @time 2022/06/28 028 14:18
  */
-class CommentViewModel(application: Application) : BaseViewModel(application) {
+class CommentViewModel(application: Application) : YenalyViewModel(application) {
 
     data class CommentUiState(
         val firstVisibleItemIndex: Int = 0,
@@ -62,15 +60,6 @@ class CommentViewModel(application: Application) : BaseViewModel(application) {
 
     private val _videoCommentFlow = MutableStateFlow(emptyList<VideoComments.VideoComment>())
     val videoCommentFlow = _videoCommentFlow.asStateFlow()
-
-    private var commentRequestJob: Job? = null
-
-    /**
-     * 最近一次請求的評論目標（影片代碼或預覽月份）。
-     * 用於避免把上一個月份的預取評論誤用到新的月份。
-     */
-    var lastCommentCode: String? = null
-        private set
 
     private val _videoReplyFlow = MutableStateFlow(emptyList<VideoComments.VideoComment>())
     val videoReplyFlow = _videoReplyFlow.asStateFlow()
@@ -118,14 +107,10 @@ class CommentViewModel(application: Application) : BaseViewModel(application) {
     }
 
     fun clearCommentData(){
-        commentRequestJob?.cancel()
-        commentRequestJob = null
         _videoCommentFlow.value = emptyList()
     }
     fun getComment(type: String, code: String) {
-        lastCommentCode = code
-        commentRequestJob?.cancel()
-        commentRequestJob = viewModelScope.launch {
+        viewModelScope.launch {
             _videoCommentStateFlow.value = WebsiteState.Loading
             NetworkRepo.getComments(type, code).collect { state ->
                 _videoCommentStateFlow.value = state
@@ -269,15 +254,15 @@ class CommentViewModel(application: Application) : BaseViewModel(application) {
     fun handleCommentLike(args: VideoCommentArgs) {
         if (args.isPositive) {
             if (args.comment.post.likeCommentStatus) {
-                GlobalToasts.show(applicationContext.getString(R.string.cancel_thumb_up_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                showShortToast(R.string.cancel_thumb_up_success)
             } else {
-                GlobalToasts.show(applicationContext.getString(R.string.thumb_up_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                showShortToast(R.string.thumb_up_success)
             }
         } else {
             if (args.comment.post.unlikeCommentStatus) {
-                GlobalToasts.show(applicationContext.getString(R.string.cancel_thumb_down_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                showShortToast(R.string.cancel_thumb_down_success)
             } else {
-                GlobalToasts.show(applicationContext.getString(R.string.thumb_down_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                showShortToast(R.string.thumb_down_success)
             }
         }
     }

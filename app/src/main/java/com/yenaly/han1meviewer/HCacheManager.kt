@@ -4,11 +4,13 @@ import android.content.Context
 import android.os.Looper
 import android.util.Log
 import androidx.annotation.WorkerThread
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.core.net.toUri
 import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.model.HanimeVideo
-import com.yenaly.han1meviewer.ui.component.GlobalDialogs
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
+import com.yenaly.han1meviewer.util.EmbeddedVideoMetadata
 import com.yenaly.han1meviewer.util.SafFileManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.encodeToStream
 import java.io.File
 import java.io.FileOutputStream
@@ -85,6 +88,27 @@ object HCacheManager {
             throw e
         }
     }
+    @OptIn(ExperimentalSerializationApi::class)
+    @WorkerThread
+    fun savePendingDownloadInfo(context: Context, videoCode: String, info: HanimeVideo) {
+        val file = pendingDownloadInfoFile(context, videoCode)
+        file.atomicWrite { outputStream ->
+            HJson.encodeToStream(info, outputStream)
+        }
+    }
+
+    fun readPendingDownloadInfo(context: Context, videoCode: String): ByteArray? =
+        pendingDownloadInfoFile(context, videoCode)
+            .takeIf { it.exists() }
+            ?.readBytes()
+
+    fun deletePendingDownloadInfo(context: Context, videoCode: String) {
+        pendingDownloadInfoFile(context, videoCode).delete()
+    }
+
+    private fun pendingDownloadInfoFile(context: Context, videoCode: String): File =
+        File(context.filesDir, "pending_download_info/$videoCode.json")
+
     fun notify(context: Context) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             showSwitchDialog(context)
@@ -95,14 +119,11 @@ object HCacheManager {
         }
     }
     private fun showSwitchDialog(context: Context) {
-        GlobalDialogs.show(
-            GlobalDialogs.ConfirmRequest(
-                title = context.getString(R.string.save_failed_title),
-                message = context.getString(R.string.save_failed_message),
-                confirmText = context.getString(R.string.understood),
-                onConfirm = {},
-            )
-        )
+        AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.save_failed_title))
+            .setMessage(context.getString(R.string.save_failed_message))
+            .setPositiveButton(context.getString(R.string.understood), null)
+            .show()
     }
 
     // 缓解写入冲突 (仅 File 模式下用)
@@ -136,8 +157,12 @@ object HCacheManager {
             if (entity != null) {
                 val folder = HFileManager.getDownloadVideoFolder(context, videoCode)
                 val cacheFile = File(folder, CACHE_INFO_FILE)
-                val cacheUri = SafFileManager.getDownloadVideoFileUri(context, videoCode, CACHE_INFO_FILE)
-                val info = kotlin.runCatching {
+                val cacheUri = SafFileManager.findDownloadVideoFileUri(context, videoCode, CACHE_INFO_FILE)
+                val embeddedInfo = runCatching {
+                    EmbeddedVideoMetadata.read(context, entity.videoUri.toUri())?.infoJson
+                        ?.let { HJson.decodeFromString<HanimeVideo>(it) }
+                }.getOrNull()
+                val info = embeddedInfo ?: kotlin.runCatching {
                     when {
                         cacheUri != null -> context.contentResolver.openInputStream(cacheUri)?.use {
                             HJson.decodeFromStream<HanimeVideo?>(it)

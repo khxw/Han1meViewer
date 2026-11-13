@@ -5,6 +5,7 @@
 
 
     <color name="per80_transparent_white">#CCFFFFFF</color>
+    <color name="per90_dark_red">#E6100000</color>
 
     <color name="md_theme_primary">#904A43</color>
     <color name="md_theme_onPrimary">#FFFFFF</color>

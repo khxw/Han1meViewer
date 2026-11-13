@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_diagnostics_check_transport">目前網路類型</string>
+    <string name="network_diagnostics_check_wifi_hotspot">Wi‑Fi / 熱點特徵</string>
+    <string name="network_diagnostics_transport_wifi">Wi‑Fi</string>
+    <string name="network_diagnostics_transport_cellular">行動網路</string>
+    <string name="network_diagnostics_transport_ethernet">有線網路</string>
+    <string name="network_diagnostics_transport_vpn">VPN</string>
+    <string name="network_diagnostics_transport_bluetooth">藍牙網路</string>
+    <string name="network_diagnostics_transport_other">其他網路</string>
+    <string name="network_diagnostics_transport_none">無網路連線</string>
+    <string name="network_diagnostics_network_validated">已驗證可存取網際網路</string>
+    <string name="network_diagnostics_network_not_validated">系統尚未驗證網際網路</string>
+    <string name="network_diagnostics_network_metered">計費網路</string>
+    <string name="network_diagnostics_network_unmetered">非計費網路</string>
+    <string name="network_diagnostics_hotspot_suspected">偵測到疑似手機熱點</string>
+    <string name="network_diagnostics_hotspot_router">未偵測到常見手機熱點特徵</string>
+    <string name="network_diagnostics_hotspot_not_wifi">目前不是 Wi‑Fi，略過熱點特徵偵測</string>
+    <string name="network_diagnostics_hotspot_gateway">閘道：%1$s</string>
+    <string name="network_diagnostics_hotspot_dns">DNS：%1$s</string>
+    <string name="network_diagnostics_hotspot_advice">熱點提供端的代理、私人 DNS、VPN 或電信阻斷會影響本機</string>
+    <string name="network_diagnostics_conclusion_hotspot">偵測到疑似手機熱點，且主站連線失敗。問題可能來自熱點提供端的代理、私人 DNS、VPN、電信或熱點轉送鏈路。</string>
+    <string name="network_diagnostics_suggest_hotspot">建議：關閉熱點提供端的 VPN／代理／私人 DNS，或改用其他 Wi‑Fi／行動網路對比。</string>
+    <string name="network_diagnostics_conclusion_offline">目前沒有可用網路連線。</string>
+    <string name="network_diagnostics_suggest_connect_network">建議：先連接 Wi‑Fi 或行動網路後重新診斷。</string>
+    <string name="network_diagnostics_check_network_environment">網路與熱點環境</string>
+    <string name="network_diagnostics_conclusion_vpn_blocked">目前正在使用 VPN，但主站仍然連線失敗。可能是 VPN 節點出口被 Cloudflare 拒絕、節點線路異常或協定受到干擾。</string>
+    <string name="network_diagnostics_suggest_vpn">建議：切換 VPN 節點或協定，或暫時關閉 VPN 後對比測試。</string>
+    <string name="network_diagnostics_conclusion_network_unvalidated">目前網路已有連線，但系統尚未驗證網際網路可用。可能存在熱點登入頁、入口認證、私人 DNS 或上游網路異常。</string>
+    <string name="network_diagnostics_suggest_network_unvalidated">建議：先開啟瀏覽器確認能正常上網，並檢查熱點認證頁、私人 DNS 和上游網路。</string>
+    <string name="network_diagnostics_conclusion_hosts_tls_blocked">內建 Hosts 的 IP 可以建立 TCP 連線，但主站 HTTPS 仍然失敗。DNS 已經繞過，問題在 TLS/SNI、Cloudflare 線路或中間網路阻斷。</string>
+    <string name="network_diagnostics_conclusion_doh_tls_blocked">DoH 已成功解析網域，但主站 HTTPS 仍然失敗。代表問題不是 DNS，而是後續的 TLS/SNI 或線路阻斷。</string>
+    <string name="network_diagnostics_suggest_tls_blocked">建議：換網域和改 Hosts 通常無效；請切換網路、關閉中間代理，或使用可用代理。</string>
+    <string name="network_diagnostics_conclusion_main_rate_limited">主站回傳 HTTP %1$d，請求已被伺服器或 Cloudflare 拒絕。這可能是限流、地區限制或目前出口 IP 風險，不一定為 DNS 或 TLS 故障。</string>
+    <string name="network_diagnostics_suggest_main_rate_limited">建議：等待幾分鐘、切換網路或更換可用代理節點後重試。</string>
+    <string name="network_diagnostics_conclusion_main_server_error">主站回傳 HTTP %1$d，伺服器或 Cloudflare 目前出現異常。</string>
+    <string name="network_diagnostics_suggest_main_server_error">建議：稍後重試，並確認站點服務狀態。</string>
+    <string name="network_diagnostics_conclusion_main_http_error">主站回傳 HTTP %1$d，網路已到達伺服器，但首頁回應異常。</string>
+</resources>

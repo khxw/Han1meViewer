@@ -1,11 +1,5 @@
 package com.yenaly.han1meviewer.ui.screen.video
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetValue
@@ -17,24 +11,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.Preferences.isAlreadyLogin
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.VIDEO_COMMENT_PREFIX
 import com.yenaly.han1meviewer.getHanimeShareText
+import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.entity.CheckInRecordEntity
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.HanimeVideo
-import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
 import com.yenaly.han1meviewer.ui.component.BottomSheetHandler
-import com.yenaly.han1meviewer.ui.component.content.EmptyContent
-import com.yenaly.han1meviewer.ui.component.content.LoadingContent
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
 import com.yenaly.han1meviewer.ui.viewmodel.CommentViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.VideoViewModel
@@ -54,11 +43,12 @@ fun RenderVideoIntroductionContent(
     onNavigateToSearch: (String) -> Unit,
     onToggleSubscribe: (HanimeVideo.Artist) -> Unit,
     onToggleFavorite: (HanimeVideo) -> Unit,
+    onToggleLocalFavorite: (HanimeVideo) -> Unit,
     onRateVideo: (HanimeVideo, Boolean) -> Unit,
     onManageMyList: (HanimeVideo.MyList?, List<Boolean>) -> Unit,
     onQuickCheckIn: (CheckInRecordEntity) -> Unit,
     onPrepareDownload: (String, HanimeVideo?) -> Unit,
-    onConfirmDownloadPrompt: (HanimeVideo?, String?) -> Unit,
+    onConfirmDownloadPrompt: (HanimeVideo?) -> Unit,
     onRequestOpenOfficialDownloadPage: () -> Unit,
     onRequestOpenDownloadPermissionSettings: () -> Unit,
     onOpenWebPage: () -> Unit,
@@ -74,6 +64,13 @@ fun RenderVideoIntroductionContent(
         getHanimeShareText(title, videoCode)
     }.orEmpty()
     val introScrollState = viewModel.getIntroScrollState(videoCode)
+
+    // 订阅数据库 Flow，收藏/取消（含分组选择弹窗异步操作）后按钮自动同步真实状态
+    val favorites by DatabaseRepo.Favorite.loadAll()
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val isLocalFav = remember(videoCode, favorites) {
+        favorites.any { it.videoCode == videoCode }
+    }
 
     HanimeTheme {
         VideoIntroductionScreen(
@@ -94,6 +91,8 @@ fun RenderVideoIntroductionContent(
             },
             onToggleSubscribe = onToggleSubscribe,
             onToggleFavorite = { video?.let(onToggleFavorite) },
+            isLocalFav = isLocalFav,
+            onToggleLocalFavorite = { video?.let(onToggleLocalFavorite) },
             onRateVideo = { isPositive ->
                 video?.let { onRateVideo(it, isPositive) }
             },
@@ -107,8 +106,8 @@ fun RenderVideoIntroductionContent(
             onDismissDownloadPrompt = {
                 onPendingDownloadPromptChange(null)
             },
-            onConfirmDownloadPrompt = { autoGroupName ->
-                onConfirmDownloadPrompt(video, autoGroupName)
+            onConfirmDownloadPrompt = {
+                onConfirmDownloadPrompt(video)
             },
             onRequestOpenOfficialDownloadPage = onRequestOpenOfficialDownloadPage,
             onRequestOpenDownloadPermissionSettings = onRequestOpenDownloadPermissionSettings,
@@ -137,61 +136,7 @@ fun RenderVideoIntroductionContent(
                 viewModel.setIntroScrollState(videoCode, index, offset)
             },
             onIntroductionLinkClick = onIntroductionLinkClick,
-            downloadGroups = viewModel.downloadGroups.collectAsStateWithLifecycle().value,
-            recommendedGroupId = viewModel.recommendedGroupId.collectAsStateWithLifecycle().value,
         )
-    }
-}
-
-/**
- * 「相关影片」标签页内容。
- *
- * 仅在「相关影片独立标签页」开关开启且非本地下载时出现；
- * 复用简介底部的 [RelatedVideosSection]，独立成可滚动页面。
- */
-@Composable
-fun RenderVideoRelatedContent(
-    viewModel: VideoViewModel,
-    onOpenVideo: (HanimeInfo) -> Unit,
-) {
-    val videoState = viewModel.hanimeVideoStateFlow.collectAsStateWithLifecycle().value
-    val video = viewModel.hanimeVideoFlow.collectAsStateWithLifecycle().value
-    val relatedVideos = video?.relatedHanimes.orEmpty()
-
-    HanimeTheme {
-        when {
-            video == null && videoState is VideoLoadingState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LoadingContent()
-                }
-            }
-
-            relatedVideos.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    EmptyContent(hint = stringResource(R.string.here_is_empty))
-                }
-            }
-
-            else -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .navigationBarsPadding(),
-                ) {
-                    RelatedVideosSection(
-                        videos = relatedVideos,
-                        onOpenVideo = onOpenVideo,
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -202,6 +147,7 @@ fun RenderVideoCommentContent(
     reportMessages: MutableSharedFlow<CommentMessage>,
     getMessageText: (CommentViewModel.Message) -> String,
     pageHost: VideoPageHost? = null,
+    imeBottomInsetPx: Int = 0,
 ) {
     val commentUiState = remember(viewModel.code) {
         viewModel.getCommentUiState(viewModel.code)
@@ -248,12 +194,12 @@ fun RenderVideoCommentContent(
                 val childReportFlow = remember(viewModel.reportMessage) {
                     viewModel.reportMessage.map { message ->
                         val text = if (message.args.isNotEmpty()) {
-                            com.yenaly.han1meviewer.util.application.getString(
+                            com.yenaly.yenaly_libs.utils.application.getString(
                                 message.resId,
                                 *message.args.toTypedArray()
                             )
                         } else {
-                            com.yenaly.han1meviewer.util.application.getString(message.resId)
+                            com.yenaly.yenaly_libs.utils.application.getString(message.resId)
                         }
                         CommentMessage(text)
                     }
@@ -296,6 +242,7 @@ fun RenderVideoCommentContent(
                         )
                     },
                     onCommentLikeSuccess = viewModel::handleCommentLike,
+                    keyboardBottomInsetPx = imeBottomInsetPx,
                     onReplyStateChange = { isReplying ->
                         if (isReplying) {
                             scope.launch { childSheetState.expand() }
@@ -314,6 +261,8 @@ fun RenderVideoCommentContent(
             reportReasons = viewModel.reportReason,
             isPreviewCommentPrefetched = false,
             isAlreadyLogin = isAlreadyLogin,
+            keyboardBottomInsetPx = imeBottomInsetPx,
+            draftKey = viewModel.code,
             onRefresh = { viewModel.getComment(VIDEO_COMMENT_PREFIX, viewModel.code) },
             onReply = { comment, text ->
                 if (!isAlreadyLogin) return@CommentScreen

@@ -1,6 +1,8 @@
 package com.yenaly.han1meviewer.ui.screen.home.myplaylist
 
 import android.content.Context
+import android.view.LayoutInflater
+import android.widget.EditText
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
@@ -38,7 +40,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -50,25 +51,23 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.BottomSheetHandler
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
-import com.yenaly.han1meviewer.ui.component.PaginationPager
-import com.yenaly.han1meviewer.ui.component.TextInputDialog
-import com.yenaly.han1meviewer.ui.component.TextInputField
-import kotlinx.coroutines.launch
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.RetryableImage
+import com.yenaly.han1meviewer.ui.screen.videoCompactMinWidth
+import com.yenaly.han1meviewer.ui.screen.videoGridSpacing
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
 import com.yenaly.han1meviewer.ui.viewmodel.MyPlayListViewModelV2
+import com.yenaly.han1meviewer.util.showAlertDialog
+import com.yenaly.yenaly_libs.utils.showShortToast
 
 /**
  * 播放列表详情底部弹窗。
@@ -94,11 +93,6 @@ fun PlaylistBottomSheet(
 ) {
     val playlistState by vm.playlistStateFlow.collectAsState()
     val playlist by vm.playlistFlow.collectAsState()
-    val unknownError = stringResource(R.string.unknown_error)
-    val modifyFailed = stringResource(R.string.modify_failed)
-    val deleteSuccess = stringResource(R.string.delete_success)
-    val modifySuccess = stringResource(R.string.modify_success)
-    val deleteFailed = stringResource(R.string.delete_failed)
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
@@ -126,7 +120,7 @@ fun PlaylistBottomSheet(
                 vm.getPlaylistItems(1, currentCode, true)
             }
         } else {
-            GlobalToasts.show(unknownError, level = GlobalToasts.ToastLevel.ERROR)
+            showShortToast(R.string.unknown_error)
         }
     }
 
@@ -175,17 +169,17 @@ fun PlaylistBottomSheet(
     LaunchedEffect(Unit) {
         vm.modifyPlaylistFlow.collect { result ->
             when (result) {
-                is WebsiteState.Error -> GlobalToasts.show(modifyFailed, level = GlobalToasts.ToastLevel.ERROR)
+                is WebsiteState.Error -> showShortToast(R.string.modify_failed)
                 WebsiteState.Loading -> {}
                 is WebsiteState.Success -> {
                     if (result.info.isDeleted) {
                         sheetState.hide()
                         onDismiss()
-                        GlobalToasts.show(deleteSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+                        showShortToast(R.string.delete_success)
                         vm.loadMyPlayList()
                         return@collect
                     }
-                    GlobalToasts.show(modifySuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+                    showShortToast(R.string.modify_success)
                     vm.getPlaylistItems(1, currentCode, true)
                     vm.loadMyPlayList()
                 }
@@ -196,10 +190,10 @@ fun PlaylistBottomSheet(
     LaunchedEffect(Unit) {
         vm.deleteFromPlaylistFlow.collect { result ->
             when (result) {
-                is WebsiteState.Error -> GlobalToasts.show(deleteFailed, level = GlobalToasts.ToastLevel.ERROR)
+                is WebsiteState.Error -> showShortToast(R.string.delete_failed)
                 is WebsiteState.Loading -> {}
                 is WebsiteState.Success -> {
-                    GlobalToasts.show(deleteSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+                    showShortToast(R.string.delete_success)
                     vm.loadMyPlayList()
                 }
             }
@@ -224,11 +218,7 @@ private fun PlaylistSheetContent(
 ) {
     var showDeletePlaylistConfirm by remember { mutableStateOf(false) }
     var showDeleteItemConfirm by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
-    var showEditPlaylistDialog by remember { mutableStateOf(false) }
     val desc by playlistDesc.collectAsState()
-    val totalPages by vm.playlistTotalPages.collectAsState()
-    val searchPagination = Preferences.searchPagination
-    val scope = rememberCoroutineScope()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(Modifier
@@ -301,7 +291,27 @@ private fun PlaylistSheetContent(
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        onClick = { showEditPlaylistDialog = true },
+                        onClick = {
+                            context.showAlertDialog {
+                                setTitle(R.string.modify_title_or_desc)
+                                val etView = LayoutInflater.from(context)
+                                    .inflate(R.layout.dialog_playlist_modify_edit_text, null)
+                                val etTitle = etView.findViewById<EditText>(R.id.et_title)
+                                val etDesc = etView.findViewById<EditText>(R.id.et_desc)
+                                etTitle.setText(playListTitle)
+                                etDesc.setText(desc)
+                                setView(etView)
+                                setPositiveButton(R.string.confirm) { _, _ ->
+                                    vm.modifyPlaylist(
+                                        listCode,
+                                        etTitle.text.toString(),
+                                        etDesc.text.toString(),
+                                        false
+                                    )
+                                }
+                                setNegativeButton(R.string.cancel, null)
+                            }
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.7f)),
                         modifier = Modifier.size(40.dp),
                         contentPadding = PaddingValues(0.dp)
@@ -319,29 +329,28 @@ private fun PlaylistSheetContent(
         Spacer(Modifier.height(8.dp))
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val columns = maxOf(2, (maxWidth / VideoNormalCardMinWidth).toInt())
+            val columns = maxOf(2, (maxWidth / videoCompactMinWidth).toInt())
 
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Adaptive(minSize = VideoNormalCardMinWidth),
-                contentPadding = PaddingValues(SpacingNormal),
-                horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-                verticalArrangement = Arrangement.spacedBy(SpacingNormal)
+                columns = GridCells.Adaptive(minSize = videoCompactMinWidth),
+                contentPadding = PaddingValues(videoGridSpacing),
+                horizontalArrangement = Arrangement.spacedBy(videoGridSpacing),
+                verticalArrangement = Arrangement.spacedBy(videoGridSpacing)
             ) {
                 itemsIndexed(playlist) { index, item ->
                     VideoCardItem(
                         videoItem = item,
                         isHorizontalCard = true,
+                        isWatched = item.watched == true,
                         onClickVideosItem = onClickItem
-                    ) { _, _ ->
-                        item.playlistItemId?.let { itemId ->
-                            showDeleteItemConfirm = Triple(itemId, item.title, index)
-                        }
+                    ) { videoCode, _ ->
+                        showDeleteItemConfirm = Triple(listCode, videoCode, index)
                     }
                 }
 
                 item(span = { GridItemSpan(columns) }) {
-                    if (playlistState is PageLoadingState.Loading && vm.currentPage > 1 && !searchPagination) {
+                    if (playlistState is PageLoadingState.Loading && vm.currentPage > 1) {
                         Box(
                             Modifier
                                 .fillMaxWidth()
@@ -353,64 +362,54 @@ private fun PlaylistSheetContent(
                     }
                 }
 
-                if (playlist.isNotEmpty()) {
+                if (playlistState is PageLoadingState.NoMoreData && playlist.isNotEmpty()) {
                     item(span = { GridItemSpan(columns) }) {
-                        if (searchPagination) {
-                            PaginationPager(
-                                currentPage = vm.currentPage.coerceAtLeast(1),
-                                totalPages = totalPages,
-                                onPageSelected = { page ->
-                                    vm.goToPlaylistPage(page, listCode)
-                                    scope.launch { gridState.scrollToItem(0) }
-                                },
-                                modifier = Modifier.padding(vertical = 4.dp),
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.load_complete_with_pages,
+                                    vm.currentPage - 1
+                                ),
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                             )
-                        } else if (playlistState is PageLoadingState.NoMoreData) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    stringResource(
-                                        R.string.load_complete_with_pages,
-                                        vm.currentPage - 1
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                )
-                            }
                         }
                     }
                 }
             }
 
-            LaunchedEffect(gridState, playlistState, searchPagination) {
+            val currentListCode = listCode
+            LaunchedEffect(gridState, playlistState) {
                 snapshotFlow { gridState.layoutInfo }.collect { layoutInfo ->
                     val totalItems = layoutInfo.totalItemsCount
                     val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                    if (!searchPagination &&
-                        lastVisibleItem >= totalItems - 3 &&
+                    if (lastVisibleItem >= totalItems - 3 &&
                         playlistState !is PageLoadingState.Loading &&
                         playlistState !is PageLoadingState.NoMoreData &&
                         !vm.isLoadingMore
                     ) {
                         vm.currentPage++
-                        vm.getPlaylistItems(vm.currentPage, listCode)
+                        vm.getPlaylistItems(vm.currentPage, currentListCode)
                     }
                 }
             }
 
-            showDeleteItemConfirm?.let { (itemId, title, index) ->
+            showDeleteItemConfirm?.let { (code, videoCode, index) ->
+                val item = playlist.find { it.videoCode == videoCode }
                 ConfirmDialog(
                     visible = true,
                     title = context.getString(R.string.delete_playlist),
-                    message = context.getString(R.string.sure_to_delete_s, title),
+                    message = context.getString(R.string.sure_to_delete_s, item?.title ?: ""),
                     confirmText = context.getString(R.string.confirm),
                     dismissText = context.getString(R.string.cancel),
                     onConfirm = {
                         vm.deleteFromPlaylist(
-                            itemId,
+                            code,
+                            videoCode,
                             index
                         ); showDeleteItemConfirm = null
                     },
@@ -433,33 +432,6 @@ private fun PlaylistSheetContent(
                     ); showDeletePlaylistConfirm = false
                 },
                 onDismiss = { showDeletePlaylistConfirm = false },
-            )
-
-            TextInputDialog(
-                visible = showEditPlaylistDialog,
-                title = context.getString(R.string.modify_title_or_desc),
-                fields = listOf(
-                    TextInputField(
-                        label = context.getString(R.string.playlist_title),
-                        initialValue = playListTitle,
-                    ),
-                    TextInputField(
-                        label = context.getString(R.string.playlist_description),
-                        initialValue = desc.orEmpty(),
-                    ),
-                ),
-                confirmText = context.getString(R.string.confirm),
-                dismissText = context.getString(R.string.cancel),
-                onConfirm = { values ->
-                    showEditPlaylistDialog = false
-                    vm.modifyPlaylist(
-                        listCode,
-                        values.getOrElse(0) { playListTitle },
-                        values.getOrElse(1) { desc.orEmpty() },
-                        false
-                    )
-                },
-                onDismiss = { showEditPlaylistDialog = false },
             )
         }
     }

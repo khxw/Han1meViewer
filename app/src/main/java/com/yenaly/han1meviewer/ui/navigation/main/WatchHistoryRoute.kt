@@ -19,7 +19,6 @@ fun WatchHistoryRouteScreen(
         onlineState = onlineViewModel.state,
         onlineSort = onlineViewModel.selectedSort,
         onlineLoadedPageCount = onlineViewModel.loadedPageCount,
-        onlineTotalPages = onlineViewModel.totalPages,
         onlineIsLoadingMore = onlineViewModel.isLoadingMore,
         onlineRefreshing = onlineViewModel::isRefreshing,
         onlineDeleteStateFlow = onlineViewModel.deleteFlow,
@@ -31,6 +30,5 @@ fun WatchHistoryRouteScreen(
         onDeleteOnlineVideo = onlineViewModel::deleteItem,
         onRefreshOnline = onlineViewModel::refresh,
         onLoadMoreOnline = onlineViewModel::loadNextPage,
-        onGoToPageOnline = onlineViewModel::goToPage,
     )
 }

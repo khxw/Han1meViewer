@@ -19,7 +19,6 @@ import com.yenaly.han1meviewer.logic.model.SubscriptionItem
 import com.yenaly.han1meviewer.logic.model.SubscriptionVideosItem
 import com.yenaly.han1meviewer.logic.model.VideoComments
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeCategory
-import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeHeroItem
 import kotlinx.datetime.LocalDate
 
 
@@ -160,40 +159,6 @@ val fakeBanner = listOf(
         picUrl = "https://vdownload.hembed.com/image/thumbnail/101573l.jpg",
         videoCode = "101573",
     )
-)
-
-val fakeHeroItems = listOf(
-    HomeHeroItem(
-        imageUrl = "https://vdownload.hembed.com/image/thumbnail/101573l.jpg",
-        title = "【新作】小悪魔の補習計画 - 第1話",
-        subtitle = "Liepraag · 20.7萬次 · 2個月前",
-        videoCode = "101573",
-    ),
-    HomeHeroItem(
-        imageUrl = "https://vdownload.hembed.com/image/thumbnail/101574l.jpg",
-        title = "姐姐的秘密训练",
-        subtitle = "nur · 22.1萬次 · 3週前",
-        videoCode = "101574",
-    ),
-    HomeHeroItem(
-        imageUrl = "https://vdownload.hembed.com/image/thumbnail/101575l.jpg",
-        title = "放学后的约定",
-        subtitle = "Aoi · 58.3萬次 · 1個月前",
-        videoCode = "101575",
-    ),
-    HomeHeroItem(
-        imageUrl = "https://vdownload.hembed.com/image/thumbnail/101576l.jpg",
-        title = "班长的福利日",
-        subtitle = "Miku · 30.0萬次 · 2週前",
-        videoCode = "101576",
-    ),
-    HomeHeroItem(
-        imageUrl = "https://vdownload.hembed.com/image/thumbnail/101577l.jpg",
-        title = "图书馆的秘密角落",
-        subtitle = "Kano · 61.7萬次 · 5天前",
-        videoCode = "101577",
-    ),
-
 )
 
 val fakeAnnouncements = listOf(
@@ -438,20 +403,18 @@ val fakeDownloadedVideos = fakeHomePageVideos.take(3).mapIndexed { index, item -
 val fakeDownloadedGroups = listOf(DownloadGroupEntity(name = "未分组", orderIndex = 0, id = 1))
 val fakeDownloadedNodes = listOf(
     DownloadHeaderNode(
-        groupId = 1,
         groupKey = "未分组",
         originalVideos = fakeDownloadedVideos,
         isExpanded = true
     ),
-    DownloadItemNode(fakeDownloadedVideos[0], 1),
-    DownloadItemNode(fakeDownloadedVideos[1], 1),
+    DownloadItemNode(fakeDownloadedVideos[0], "未分组"),
+    DownloadItemNode(fakeDownloadedVideos[1], "未分组"),
     DownloadHeaderNode(
-        groupId = 2,
         groupKey = "分组1",
         originalVideos = fakeDownloadedVideos,
         isExpanded = true
     ),
-    DownloadItemNode(fakeDownloadedVideos[0], 2),
+    DownloadItemNode(fakeDownloadedVideos[0], "分组1"),
 )
 
 const val longText =

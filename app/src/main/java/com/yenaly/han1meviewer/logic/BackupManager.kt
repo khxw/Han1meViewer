@@ -10,6 +10,8 @@ import com.yenaly.han1meviewer.logic.dao.DownloadDatabase
 import com.yenaly.han1meviewer.logic.dao.HistoryDatabase
 import com.yenaly.han1meviewer.logic.dao.MiscellanyDatabase
 import com.yenaly.han1meviewer.logic.entity.CheckInRecordEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteGroupEntity
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.SideDishEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
@@ -22,7 +24,7 @@ import kotlinx.serialization.json.Json
 import java.io.OutputStream
 
 object BackupManager {
-    private const val BACKUP_VERSION = 1
+    private const val BACKUP_VERSION = 2
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -41,6 +43,8 @@ object BackupManager {
         val checkInRecords: List<CheckInRecordEntity>? = null,
         val sideDishes: List<SideDishEntity>? = null,
         val watchHistories: List<WatchHistoryEntity>? = null,
+        val favorites: List<FavoriteEntity>? = null,
+        val favoriteGroups: List<FavoriteGroupEntity>? = null,
         val downloadGroups: List<DownloadGroupEntity>? = null,
         val downloads: List<HanimeDownloadEntity>? = null,
         val downloadCategories: List<DownloadCategoryEntity>? = null,
@@ -107,6 +111,25 @@ object BackupManager {
             }
         }
 
+        backup.favoriteGroups?.let { favoriteGroups ->
+            HistoryDatabase.instance.favoriteGroup.apply {
+                deleteAll()
+                insertAll(favoriteGroups)
+            }
+        }
+
+        backup.favorites?.let { favorites ->
+            // 仅保留恢复后仍存在的分组引用，失效的分组 id 归入未分组（兼容旧备份）
+            val validGroupIds =
+                backup.favoriteGroups?.mapTo(mutableSetOf()) { it.id }.orEmpty()
+            HistoryDatabase.instance.favorite.apply {
+                deleteAll()
+                favorites.forEach {
+                    insert(if (it.groupId !in validGroupIds) it.copy(groupId = null) else it)
+                }
+            }
+        }
+
         if (backup.downloadGroups != null || backup.downloads != null ||
             backup.downloadCategories != null || backup.downloadCategoryCrossRefs != null
         ) {
@@ -165,6 +188,8 @@ object BackupManager {
             checkInRecords = CheckInRecordDatabase.getDatabase(context).checkInDao().getAllRecords(),
             sideDishes = CheckInRecordDatabase.getDatabase(context).sideDishDao().getAll(),
             watchHistories = HistoryDatabase.instance.watchHistory.getAll(),
+            favorites = HistoryDatabase.instance.favorite.getAll(),
+            favoriteGroups = HistoryDatabase.instance.favoriteGroup.getAll(),
             downloadGroups = DownloadDatabase.instance.downloadGroupDao.getAllGroupsOnce(),
             downloads = DownloadDatabase.instance.hanimeDownloadDao.getAll(),
             downloadCategories = DownloadDatabase.instance.downloadCategoryDao.getAllCategoriesOnce(),

@@ -3,31 +3,22 @@ package com.yenaly.han1meviewer
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Process
 import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.video.VideoFrameDecoder
 import com.google.android.material.color.DynamicColors
-import com.google.firebase.Firebase
-import com.google.firebase.analytics.analytics
-import com.google.firebase.crashlytics.crashlytics
-import com.google.firebase.crashlytics.setCustomKeys
-import com.google.firebase.database.database
-import com.google.firebase.remoteconfig.remoteConfig
-import com.google.firebase.remoteconfig.remoteConfigSettings
+import com.yenaly.han1meviewer.logic.log.HLumberjack
 import com.yenaly.han1meviewer.logic.network.HProxySelector
-import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
-import com.yenaly.han1meviewer.ui.activity.MainActivity
-import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.util.AnimeShaders
 import com.yenaly.han1meviewer.util.ThemeUtils
-import com.developer.crashx.config.CrashConfig
-import com.yenaly.han1meviewer.base.BaseApplication
-import com.yenaly.han1meviewer.base.AppLocale
-import coil3.ImageLoader
-import coil3.SingletonImageLoader
-import coil3.memory.MemoryCache
+import com.yenaly.yenaly_libs.base.YenalyApplication
+import com.yenaly.yenaly_libs.utils.LanguageHelper
 import `is`.xyz.mpv.MPVLib
+import java.io.File
 import java.net.ProxySelector
 
 /**
@@ -35,81 +26,33 @@ import java.net.ProxySelector
  * @author Yenaly Liew
  * @time 2022/06/08 008 17:32
  */
-class HanimeApplication : BaseApplication(), SingletonImageLoader.Factory {
+class HanimeApplication : YenalyApplication(), SingletonImageLoader.Factory {
 
     companion object {
         const val TAG = "HanimeApplication"
-
-        /**
-         * 全局图片内存缓存上限。
-         *
-         * Coil3 默认会使用堆的 20%，在 256 MB 堆的设备上约 51 MB；再叠加播放器缓冲后
-         * 很容易触发 OOM。统一限制到 32 MB，并让所有页面共用同一个 ImageLoader。
-         */
-        private const val IMAGE_MEMORY_CACHE_BYTES = 32L * 1024 * 1024
     }
 
-    override fun newImageLoader(context: Context): ImageLoader {
-        return ImageLoader.Builder(context)
-            .memoryCache {
-                MemoryCache.Builder()
-                    .maxSizeBytes(IMAGE_MEMORY_CACHE_BYTES)
-                    .build()
-            }
+    /**
+     * 已经在 [HInitializer] 中处理了
+     */
+    override val isDefaultCrashHandlerEnabled: Boolean = false
+
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(VideoFrameDecoder.Factory()) }
             .build()
-    }
-
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        // #676 部分情况下会OOM，设置内存上限
-        // UI_HIDDEN 是官方推荐释放 Bitmap 等界面资源的等级，同时也能覆盖后台内存压力。
-        if (level >= TRIM_MEMORY_UI_HIDDEN) {
-            SingletonImageLoader.get(this).memoryCache?.clear()
-        }
-    }
-
-    private fun initCrashX() {
-        CrashConfig.Builder.create()
-            .backgroundMode(CrashConfig.BACKGROUND_MODE_SHOW_CUSTOM)
-            .enabled(true)
-            .includeDeviceInfo(true)
-            .showErrorDetails(true)
-            .showRestartButton(true)
-            .showCloseButton(true)
-            .showReportButton(true)
-            .showCopyButtonInDetails(true)
-            .logErrorOnRestart(true)
-            .trackActivities(true)
-            .minTimeBetweenCrashesMs(3000)
-            .errorTitle(getString(R.string.crash_title))
-            .errorDrawable(R.drawable.h_chan_cry)
-            .errorMessage(getString(R.string.crash_message))
-            .restartButtonText(getString(R.string.crash_restart))
-            .closeButtonText(getString(R.string.crash_close))
-            .detailsButtonText(getString(R.string.crash_details))
-            .reportButtonText(getString(R.string.crash_report))
-            .copyButtonText(getString(R.string.crash_copy))
-            .restartActivity(MainActivity::class.java)
-            .apply()
-    }
-
-    private fun isMainProcess(): Boolean {
-        val pid = Process.myPid()
-        val am = getSystemService(android.app.ActivityManager::class.java)
-        return am?.runningAppProcesses?.firstOrNull { it.pid == pid }?.processName == packageName
-    }
 
     override fun onCreate() {
         super.onCreate()
-        if (!isMainProcess()) return
-        initCrashX()
+        cleanupLegacyProxyData()
         ThemeUtils.applyDarkModeFromPreferences(this)
-        if (ThemeColorPreset.fromKey(Preferences.themeColor) == ThemeColorPreset.SYSTEM) {
+        // 恢复上次运行期间落盘的网络日志，供用户反馈问题时查看
+        HLumberjack.loadFromDisk()
+        if (Preferences.useDynamicColor){
             DynamicColors.applyToActivitiesIfAvailable(this)
         }
         ProxySelector.setDefault(HProxySelector())
         HProxySelector.rebuildNetwork()
-        initFirebase()
         initNotificationChannel()
         MPVLib.create(applicationContext)
         MPVLib.init()
@@ -124,35 +67,35 @@ class HanimeApplication : BaseApplication(), SingletonImageLoader.Factory {
         switchLauncher(selected)
     }
 
-    private fun initFirebase() {
-        // 用于处理 Firebase Analytics 初始化
-        Firebase.analytics.setAnalyticsCollectionEnabled(Preferences.isAnalyticsEnabled)
-        // 用于处理 Firebase Crashlytics 初始化
-        Firebase.crashlytics.apply {
-            isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG
-            setCustomKeys {
-                key(
-                    FirebaseConstants.APP_LANGUAGE,
-                    AppLocale.preferredLanguage.toLanguageTag()
-                )
-                key(
-                    FirebaseConstants.VERSION_SOURCE,
-                    BuildConfig.VERSION_SOURCE
-                )
+    /**
+     * 一次性清理已移除的内置代理留下的本地数据。
+     *
+     * 2.1.122 起内置代理功能已整体删除，但旧版本会把这些东西落在本机：
+     * - `comic_proxy` SharedPreferences：订阅链接、当前节点名、节点列表、订阅原文；
+     * - `filesDir/mihomo/config.yaml`：订阅里的节点凭据（uuid / 密码等）。
+     *
+     * 现在已没有任何代码读取它们，属于应该主动清掉的敏感残留。
+     * 清空后再次启动时 `all` 为空、目录不存在，都是空操作。
+     */
+    private fun cleanupLegacyProxyData() {
+        runCatching {
+            val legacy = getSharedPreferences("comic_proxy", Context.MODE_PRIVATE)
+            if (legacy.all.isNotEmpty()) {
+                legacy.edit().clear().commit()
+                Log.i(TAG, "legacy proxy prefs cleared")
             }
+        }.onFailure {
+            Log.w(TAG, "clear legacy proxy prefs failed: ${it.message}")
         }
-        // 用于处理 Firebase Remote Config 初始化
-        Firebase.remoteConfig.apply {
-            setConfigSettingsAsync(remoteConfigSettings {
-                minimumFetchIntervalInSeconds = if (BuildConfig.DEBUG) 0 else 3 * 60 * 60
-                fetchTimeoutInSeconds = 10
-            })
-            setDefaultsAsync(FirebaseConstants.remoteConfigDefaults)
-            fetchAndActivate().addOnCompleteListener {
-                AppViewModel.getLatestVersion(delayMillis = 200)
+        runCatching {
+            val home = File(filesDir, "mihomo")
+            if (home.exists()) {
+                home.deleteRecursively()
+                Log.i(TAG, "legacy mihomo home removed")
             }
+        }.onFailure {
+            Log.w(TAG, "remove legacy mihomo home failed: ${it.message}")
         }
-        Firebase.database.setPersistenceEnabled(true)
     }
 
     private fun initNotificationChannel() {

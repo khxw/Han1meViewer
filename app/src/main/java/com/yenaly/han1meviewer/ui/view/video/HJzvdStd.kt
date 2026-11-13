@@ -1,8 +1,8 @@
 package com.yenaly.han1meviewer.ui.view.video
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.res.ColorStateList
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.media.AudioFocusRequest
@@ -15,7 +15,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
 import android.view.Gravity
-import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -28,6 +27,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.IntRange
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.getSystemService
@@ -38,11 +38,13 @@ import androidx.core.view.isVisible
 import androidx.core.view.size
 import androidx.core.view.updatePadding
 import androidx.fragment.app.FragmentActivity
+import androidx.navigation.findNavController
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import cn.jzvd.JZDataSource
 import cn.jzvd.JZMediaInterface
+import cn.jzvd.JZMediaInterface.SAVED_SURFACE
 import cn.jzvd.JZUtils
 import cn.jzvd.JzvdStd
 import com.google.android.material.button.MaterialButton
@@ -55,16 +57,16 @@ import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.adapter.HKeyframeRvAdapter
 import com.yenaly.han1meviewer.ui.adapter.SuperResolutionAdapter
 import com.yenaly.han1meviewer.ui.adapter.VideoSpeedAdapter
-import com.yenaly.han1meviewer.ui.component.GlobalDialogs
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.navigation.main.HomeRoute
 import com.yenaly.han1meviewer.util.setStateViewLayout
-import com.yenaly.han1meviewer.util.OrientationManager
-import com.yenaly.han1meviewer.util.appScreenWidth
-import com.yenaly.han1meviewer.util.findActivityOrNull
-import com.yenaly.han1meviewer.util.navBarHeight
-import com.yenaly.han1meviewer.util.statusBarHeight
-import com.yenaly.han1meviewer.util.unsafeLazy
+import com.yenaly.han1meviewer.util.showAlertDialog
+import com.yenaly.yenaly_libs.utils.OrientationManager
+import com.yenaly.yenaly_libs.utils.appScreenWidth
+import com.yenaly.yenaly_libs.utils.findActivityOrNull
+import com.yenaly.yenaly_libs.utils.navBarHeight
+import com.yenaly.yenaly_libs.utils.statusBarHeight
+import com.yenaly.yenaly_libs.utils.unsafeLazy
+import com.yenaly.yenaly_libs.utils.view.removeItself
 import java.util.Timer
 import kotlin.math.absoluteValue
 
@@ -202,11 +204,12 @@ class HJzvdStd @JvmOverloads constructor(
             field = value
 
             val updateText = {
-                tvSpeed.text = if (value == DEF_SPEED_INDEX) {
+                val text = if (value == DEF_SPEED_INDEX) {
                     context.getString(R.string.speed)
                 } else {
                     speedStringArray[value]
                 }
+                tvSpeed.text = text
             }
 
             if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -225,6 +228,7 @@ class HJzvdStd @JvmOverloads constructor(
     fun getSuperResolutionArray(): Array<String> = arrayOf(
         context.getString(R.string.super_resolution_off),
         context.getString(R.string.super_resolution_performance),
+        context.getString(R.string.super_resolution_balanced),
         context.getString(R.string.super_resolution_quality)
     )
     private var superResolutionIndex = 0
@@ -237,7 +241,13 @@ class HJzvdStd @JvmOverloads constructor(
             }
             if (mediaInterface is MpvMediaKernel) {
                 val kernel = mediaInterface as MpvMediaKernel
-                kernel.setSuperResolution(value)
+                if (!kernel.setSuperResolution(value)) {
+                    Toast.makeText(
+                        context,
+                        R.string.super_resolution_failed,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
             }
         }
 
@@ -249,7 +259,6 @@ class HJzvdStd @JvmOverloads constructor(
     private lateinit var layoutTop: View
     private lateinit var layoutBottom: View
     private lateinit var gestureLock: ImageView
-    private lateinit var btnLoop: ImageView
     var gestureLocked = false
     var savedProgress: Long = 0L
     private lateinit var btnResumeProgress: MaterialButton
@@ -260,19 +269,6 @@ class HJzvdStd @JvmOverloads constructor(
     private var hasRestoredProgress  = false
     lateinit var orientationManager: OrientationManager
     private lateinit var superResolution: TextView
-
-    /**
-     * 是否开启单片循环播放
-     */
-    var isLooping = false
-        set(value) {
-            field = value
-            if (::btnLoop.isInitialized) {
-                btnLoop.imageTintList = ColorStateList.valueOf(
-                    if (value) dialogAccentColor else Color.WHITE
-                )
-            }
-        }
 
     var hKeyframe: HKeyframeEntity? = null
         set(value) {
@@ -360,7 +356,6 @@ class HJzvdStd @JvmOverloads constructor(
                         val mi: JZMediaInterface? = mediaInterface
                         if (mi != null && mi.isPlaying) {
                             setSpeedInternal(videoSpeed * userDefLongPressSpeedTimes)
-                            textureViewContainer.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             isSpeedGestureDetected = true
                         }
                     }
@@ -423,14 +418,11 @@ class HJzvdStd @JvmOverloads constructor(
         topBarContainer = findViewById(R.id.top_bar_container)
         gestureLock = findViewById(R.id.lock)
         gestureLock.isSelected = false
-        btnLoop = findViewById(R.id.btn_loop)
-        textureViewContainer.isHapticFeedbackEnabled = true
         tvSpeed.setOnClickListener(this)
         tvKeyframe.setOnClickListener(this)
         tvKeyframe.setOnLongClickListener(this)
         btnGoHome.setOnClickListener(this)
         superResolution.setOnClickListener(this)
-        btnLoop.setOnClickListener(this)
         btnResumeProgress.setOnClickListener {
             hasRestoredProgress = true
             mediaInterface.seekTo(0L)
@@ -458,6 +450,7 @@ class HJzvdStd @JvmOverloads constructor(
     fun setUp(jzDataSource: JZDataSource?, screen: Int, kernel: HMediaKernel.Type) {
         setUp(jzDataSource, screen, kernel.clazz)
     }
+
     fun setControlsVisible(visible: Boolean) {
         findViewById<View>(R.id.tv_speed)?.isVisible = visible
         findViewById<View>(R.id.tv_keyframe)?.isVisible = visible
@@ -465,9 +458,33 @@ class HJzvdStd @JvmOverloads constructor(
         findViewById<View>(R.id.go_home)?.isVisible = visible
         findViewById<View>(R.id.layout_top)?.isVisible = visible
         findViewById<View>(R.id.layout_bottom)?.isVisible = visible
-        findViewById<View>(R.id.btn_loop)?.isVisible = visible
+        if (visible) {
+            // 退出小窗口：恢复被隐藏覆盖层的原始状态（如 poster 仅在播放前显示）
+            pipHiddenViews.forEach { (view, visibility) -> view.visibility = visibility }
+            pipHiddenViews.clear()
+        } else {
+            // 小窗口（PIP）只保留视频画面，其余覆盖层全部隐藏，避免错位残留
+            pipHiddenViews.clear()
+            listOf(
+                R.id.poster, R.id.bottom_progress, R.id.loading,
+                R.id.start_layout, R.id.replay_text, R.id.retry_layout,
+                R.id.btn_resume_progress,
+            ).forEach { resId ->
+                findViewById<View>(resId)?.let { view ->
+                    if (view.visibility != View.GONE) {
+                        pipHiddenViews += view to view.visibility
+                        view.isVisible = false
+                    }
+                }
+            }
+        }
     }
+    // 记录小窗口模式被强制隐藏的覆盖层及其原始可见性，用于退出后恢复
+    private val pipHiddenViews = mutableListOf<Pair<View, Int>>()
     override fun setUp(jzDataSource: JZDataSource?, screen: Int, clazz: Class<*>) {
+        // JZMediaInterface.SAVED_SURFACE 是静态字段：新播放器会话必须重置，
+        // 否则会复用上一个页面已失效的纹理（黑屏但有声音）
+        SAVED_SURFACE = null
         super.setUp(jzDataSource, screen, clazz)
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val preferredQuality = prefs.getString("default_video_quality", null)
@@ -500,7 +517,7 @@ class HJzvdStd @JvmOverloads constructor(
         })
         titleTextView.isInvisible = true
         if (bottomProgressBar != null && !showBottomProgress) {
-            bottomProgressBar?.let { bar -> (bar.parent as? ViewGroup)?.removeView(bar) }
+            bottomProgressBar.removeItself()
             bottomProgressBar = ProgressBar(context)
         }
         screenBrightnessBK = try {
@@ -529,6 +546,7 @@ class HJzvdStd @JvmOverloads constructor(
         }
         return super.onTouch(v, event)
     }
+
 
     fun autoFullscreen(orientation: OrientationManager.ScreenOrientation) {
         autoFullscreen(if (orientation === OrientationManager.ScreenOrientation.LANDSCAPE) 1.0f else -1.0f)
@@ -724,16 +742,6 @@ class HJzvdStd @JvmOverloads constructor(
             R.id.tv_speed -> clickSpeed()
             R.id.tv_keyframe -> onKeyframeClickListener?.invoke(v)
             R.id.super_resolution -> clickSuperResolution()
-            R.id.btn_loop -> {
-                isLooping = !isLooping
-                applyLooping()
-                GlobalToasts.show(
-                    context.getString(
-                        if (isLooping) R.string.loop_play_on else R.string.loop_play_off
-                    ),
-                    level = if (isLooping) GlobalToasts.ToastLevel.SUCCESS else GlobalToasts.ToastLevel.INFO,
-                )
-            }
             R.id.go_home -> {
                 if (screen != SCREEN_FULLSCREEN) {
                     context.findActivityOrNull<MainActivity>()?.let { activity ->
@@ -749,6 +757,14 @@ class HJzvdStd @JvmOverloads constructor(
     }
     @SuppressLint("InflateParams")
     fun clickSuperResolution() {
+        if (Preferences.enableGPUNextRenderer) {
+            Toast.makeText(
+                context,
+                R.string.super_resolution_gpu_next_conflict,
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
         onCLickUiToggleToClear()
         val inflater = LayoutInflater.from(context).inflate(R.layout.jz_layout_speed, null)
         val rv = inflater.findViewById<RecyclerView>(R.id.rv_video_speed)
@@ -773,38 +789,19 @@ class HJzvdStd @JvmOverloads constructor(
         return when (v.id) {
             R.id.tv_keyframe -> {
                 onKeyframeLongClickListener?.invoke(v)
-                true
+                return true
             }
             else -> false
         }
     }
 
     override fun onCompletion() {
-        if (isLooping) {
-            restartLoop()
-            return
-        }
         if (screen == SCREEN_FULLSCREEN) {
             onStateAutoComplete()
         } else {
             super.onCompletion()
         }
         posterImageView.isGone = true
-    }
-
-    private fun restartLoop() {
-        mediaInterface?.seekTo(0L)
-        mediaInterface?.start()
-        onStatePlaying()
-    }
-
-    private fun applyLooping() {
-        jzDataSource.looping = isLooping
-        when (val mi = mediaInterface) {
-            is ExoMediaKernel -> mi.setLooping(isLooping)
-            is MpvMediaKernel -> mi.setLooping(isLooping)
-            is SystemMediaKernel -> mi.setLooping(isLooping)
-        }
     }
 
     override fun touchActionMove(x: Float, y: Float) {
@@ -1059,22 +1056,18 @@ class HJzvdStd @JvmOverloads constructor(
     }
 
     override fun showWifiDialog() {
-        GlobalDialogs.show(
-            GlobalDialogs.ConfirmRequest(
-                title = jzvdContext.getString(R.string.warning),
-                message = jzvdContext.getString(cn.jzvd.R.string.tips_not_wifi),
-                confirmText = jzvdContext.getString(cn.jzvd.R.string.tips_not_wifi_confirm),
-                dismissText = jzvdContext.getString(cn.jzvd.R.string.tips_not_wifi_cancel),
-                onConfirm = {
-                    WIFI_TIP_DIALOG_SHOWED = true
-                    if (state == STATE_PAUSE) startButton.performClick() else startVideo()
-                },
-                onCancel = {
-                    releaseAllVideos()
-                    clearFloatScreen()
-                },
-            )
-        )
+        jzvdContext.showAlertDialog {
+            setTitle(R.string.warning)
+            setMessage(cn.jzvd.R.string.tips_not_wifi)
+            setPositiveButton(cn.jzvd.R.string.tips_not_wifi_confirm) { _, _ ->
+                WIFI_TIP_DIALOG_SHOWED = true
+                if (state == STATE_PAUSE) startButton.performClick() else startVideo()
+            }
+            setNegativeButton(cn.jzvd.R.string.tips_not_wifi_cancel) { _, _ ->
+                releaseAllVideos()
+                clearFloatScreen()
+            }
+        }
     }
 
     // 原來是 300 period 我改成了 100 爲了計時準確
@@ -1152,6 +1145,7 @@ class HJzvdStd @JvmOverloads constructor(
         topCon: Int, bottomCon: Int, startBtn: Int, loadingPro: Int,
         posterImg: Int, bottomPro: Int, retryLayout: Int
     ) {
+
         if (Looper.myLooper() == Looper.getMainLooper()) {
             setAllControlsVisiblity(topCon, bottomCon, startBtn, loadingPro, posterImg, bottomPro, retryLayout)
         } else {

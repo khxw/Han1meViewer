@@ -1,7 +1,9 @@
 package com.yenaly.han1meviewer.ui.component
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.VideoItemType
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeVideosItem
@@ -48,6 +54,7 @@ import com.yenaly.han1meviewer.util.DisplayTextLocalizer
  *
  * @param videoItem 视频数据
  * @param isHorizontalCard 是否为水平卡片布局，默认为 true
+ * @param enablePressScale 是否使用常驻缩放层，滚动密集列表可关闭。
  * @param onClickVideosItem 点击回调，参数为视频 ID
  * @param onLongClickVideosItem 长按回调，参数为视频 ID 和视频标题
  */
@@ -58,25 +65,40 @@ fun VideoCardItem(
     isHorizontalCard: Boolean = true,
     isWatched: Boolean = false,
     isPlaying: Boolean = false,
+    enablePressScale: Boolean = true,
     onClickVideosItem: (String) -> Unit,
     onLongClickVideosItem: (String, String) -> Unit,
 ) {
     val textFontSize = dimensionResource(id = R.dimen.video_view_and_time_and_duration).value.sp
     val iconSize = dimensionResource(id = R.dimen.view_view_and_time_icon_size)
     val imageAspectRatio = if (isHorizontalCard) 16f / 9f else 3f / 4f
+    val interactionSource = remember { MutableInteractionSource() }
+    val isCompact = Preferences.useCompactMode
+    val cardShape = RoundedCornerShape(if (isCompact) 10.dp else 16.dp)
+    val pressScaleModifier = if (enablePressScale) {
+        Modifier.pressScale(interactionSource)
+    } else {
+        Modifier
+    }
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .then(pressScaleModifier)
             .combinedClickable(
+                interactionSource = interactionSource,
                 enabled = !isPlaying,
                 onClick = { onClickVideosItem(videoItem.videoCode) },
                 onLongClick = { onLongClickVideosItem(videoItem.videoCode, videoItem.title) },
             ),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surface,
+        shape = cardShape,
+        tonalElevation = if (isCompact) 0.dp else 1.dp,
+        shadowElevation = if (isCompact) 1.dp else 3.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+        ),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -94,6 +116,7 @@ fun VideoCardItem(
                     placeholder = painterResource(R.drawable.h_chan_loading),
                     error = painterResource(R.drawable.h_chan_load_failed),
                     contentScale = ContentScale.FillWidth,
+                    crossfade = false,
                 )
 
                 if (isWatched) {
@@ -114,6 +137,28 @@ fun VideoCardItem(
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelSmall
                         )
+                    }
+                } else {
+                    // 未观看时右上角显示时长角标
+                    videoItem.duration?.takeIf { it.isNotBlank() }?.let { duration ->
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 6.dp, end = 6.dp)
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.65f),
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = duration,
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
 
@@ -209,7 +254,7 @@ fun VideoCardItem(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 10.dp),
             )
             Text(
                 text = videoItem.currentArtist ?: "作者",
@@ -219,14 +264,15 @@ fun VideoCardItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 10.dp),
             )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(horizontal = 8.dp)
-                    .fillMaxWidth(),
+                    .padding(horizontal = 10.dp)
+                    .fillMaxWidth()
+                    .heightIn(min = iconSize),
             ) {
                 videoItem.reviews?.takeIf { it.isNotEmpty() }?.let { reviewsText ->
                     Icon(

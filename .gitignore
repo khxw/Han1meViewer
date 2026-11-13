@@ -57,6 +57,7 @@ Thumbs.db
 **/profiles/
 
 # 特定项目忽略
+/yenaly_libs/local/
 /icon/temp/
 
 # 但保留gradle wrapper
@@ -68,3 +69,15 @@ Thumbs.db
 
 # 忽略 debug 测试构建
 /app/build/outputs/apk/debug/
+# Superpowers brainstorming sessions
+.superpowers/
+
+# Signing material must never be pushed
+*.jks
+*.keystore
+/app/keystore/
+
+# Accidental shell-redirection artifacts
+/当前版本号：*
+/整理日期：*
+/develop

@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -23,23 +21,21 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.model.Playlists
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
-import com.yenaly.han1meviewer.ui.component.PaginationPager
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.screen.getColumnCount
-import kotlinx.coroutines.launch
+import com.yenaly.han1meviewer.ui.screen.videoGridSpacing
 
 /**
  * 播放列表页 Content 层。纯 UI，不持有 ViewModel。
@@ -60,17 +56,15 @@ fun PlaylistContent(
     val gridState = rememberLazyGridState()
     val noMore = uiState.noMorePlaylists
     val loadingMore = uiState.isLoadingMore
-    val searchPagination = Preferences.searchPagination
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(gridState, noMore, loadingMore, searchPagination) {
+    LaunchedEffect(gridState, noMore, loadingMore) {
         snapshotFlow {
             val layoutInfo = gridState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             lastVisibleItem >= totalItems - 3 && uiState.playlists.isNotEmpty()
         }.collect { shouldLoad ->
-            if (shouldLoad && !loadingMore && !noMore && !searchPagination) {
+            if (shouldLoad && !loadingMore && !noMore) {
                 onEvent(PlaylistEvent.OnLoadMore)
             }
         }
@@ -114,11 +108,10 @@ fun PlaylistContent(
                 }
                 LazyVerticalGrid(
                     state = gridState,
-                    // 较窄手机上避免退化成单列，保证播放清单卡片至少两列
-                    columns = GridCells.Fixed(maxOf(2, getColumnCount(180))),
-                    contentPadding = PaddingValues(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    columns = GridCells.Fixed(getColumnCount(if (Preferences.useCompactMode) 150 else 180)),
+                    contentPadding = PaddingValues(videoGridSpacing),
+                    horizontalArrangement = Arrangement.spacedBy(videoGridSpacing),
+                    verticalArrangement = Arrangement.spacedBy(videoGridSpacing)
                 ) {
                     items(uiState.playlists) { playlist ->
                         PlaylistItem(
@@ -135,25 +128,13 @@ fun PlaylistContent(
                     }
                     if (uiState.playlists.isNotEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
-                            if (searchPagination) {
-                                PaginationPager(
-                                    currentPage = uiState.playlistPage.coerceAtLeast(1),
-                                    totalPages = uiState.totalPages,
-                                    onPageSelected = { page ->
-                                        onEvent(PlaylistEvent.OnGoToPage(page))
-                                        scope.launch { gridState.scrollToItem(0) }
-                                    },
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                )
-                            } else {
-                                LoadMoreFooter(
-                                    state = if (uiState.noMorePlaylists) PageLoadingState.NoMoreData
-                                    else if (uiState.isLoadingMore) PageLoadingState.Loading
-                                    else PageLoadingState.Success(Unit),
-                                    loadedPage = uiState.playlistPage - 1,
-                                    isLoadingMore = uiState.isLoadingMore
-                                )
-                            }
+                            LoadMoreFooter(
+                                state = if (uiState.noMorePlaylists) PageLoadingState.NoMoreData
+                                else if (uiState.isLoadingMore) PageLoadingState.Loading
+                                else PageLoadingState.Success(Unit),
+                                loadedPage = uiState.playlistPage - 1,
+                                isLoadingMore = uiState.isLoadingMore
+                            )
                         }
                     }
                 }

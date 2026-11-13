@@ -9,7 +9,6 @@ import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.Headers
 import retrofit2.http.HTTP
 import retrofit2.http.Multipart
 import retrofit2.http.POST
@@ -60,7 +59,6 @@ interface HanimeMyListService {
         @Query("page") page: Int,
     ): Response<ResponseBody>
 
-    // 2026-11 網站改版：email 輸入框已 disabled（瀏覽器不會提交該欄位），故不再上傳 email
     @FormUrlEncoded
     @POST("user/{userid}")
     suspend fun updateUserAccountProfile(
@@ -69,6 +67,7 @@ interface HanimeMyListService {
         @Field("_method") method: String = "patch",
         @Field("type") type: String = "profile",
         @Field("name") name: String,
+        @Field("email") email: String,
         @Header("X-CSRF-TOKEN") csrfToken_1: String? = csrfToken,
     ): Response<ResponseBody>
 
@@ -109,10 +108,12 @@ interface HanimeMyListService {
         @Query("page") page: Int
     ): Response<ResponseBody>
 
-    @Headers("Accept: application/json")
-    @HTTP(method = "DELETE", path = "playlist/items/{itemId}", hasBody = false)
+    @FormUrlEncoded
+    @POST("deletePlayitem")
     suspend fun deleteMyListItems(
-        @Path("itemId") itemId: String,
+        @Field("playlist_id") listType: String,
+        @Field("video_id") videoCode: String,
+        @Field("count") count: Int = 1, // 隨便傳一個就行
         @Header("X-CSRF-TOKEN") csrfToken: String?,
     ): Response<ResponseBody>
 

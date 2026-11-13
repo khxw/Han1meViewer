@@ -1,7 +1,7 @@
 package com.yenaly.han1meviewer.logic.model
 
 import android.os.Parcelable
-import com.yenaly.han1meviewer.base.AppLocale
+import com.yenaly.yenaly_libs.utils.LanguageHelper
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -35,7 +35,7 @@ data class ReportReason(
         get() {
             if (lang == null) return reasonKey.orEmpty()
 
-            val pl = AppLocale.preferredLanguage
+            val pl = LanguageHelper.preferredLanguage
             return when (pl.language) {
                 Locale.CHINESE.language -> when (pl.country) {
                     Locale.SIMPLIFIED_CHINESE.country -> lang.zhrCN

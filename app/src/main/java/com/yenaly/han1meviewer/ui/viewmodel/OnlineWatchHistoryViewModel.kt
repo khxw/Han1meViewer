@@ -10,7 +10,7 @@ import com.yenaly.han1meviewer.logic.model.OnlineWatchHistorySort
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel.csrfToken
-import com.yenaly.han1meviewer.base.BaseViewModel
+import com.yenaly.yenaly_libs.base.YenalyViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class OnlineWatchHistoryViewModel(application: Application) : BaseViewModel(application) {
+class OnlineWatchHistoryViewModel(application: Application) : YenalyViewModel(application) {
 
     private val _state = MutableStateFlow<PageLoadingState<MyListItems<HanimeInfo>>>(PageLoadingState.Loading)
     val state = _state.asStateFlow()
@@ -31,9 +31,6 @@ class OnlineWatchHistoryViewModel(application: Application) : BaseViewModel(appl
 
     private val _loadedPageCount = MutableStateFlow(0)
     val loadedPageCount = _loadedPageCount.asStateFlow()
-
-    private val _totalPages = MutableStateFlow(1)
-    val totalPages = _totalPages.asStateFlow()
 
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore = _isLoadingMore.asStateFlow()
@@ -65,17 +62,6 @@ class OnlineWatchHistoryViewModel(application: Application) : BaseViewModel(appl
         loadPage(_loadedPageCount.value + 1)
     }
 
-    fun goToPage(page: Int) {
-        if (_isLoadingMore.value) return
-        isRefreshing = true
-        isManualRefreshing = true
-        _isLoadingMore.value = false
-        _loadedPageCount.value = 0
-        _state.value = PageLoadingState.Loading
-        _items.value = emptyList()
-        loadPage(page)
-    }
-
     private fun loadPage(page: Int) {
         val userId = Preferences.savedUserId
         if (userId.isBlank()) {
@@ -91,7 +77,6 @@ class OnlineWatchHistoryViewModel(application: Application) : BaseViewModel(appl
                     when (pageState) {
                         is PageLoadingState.Success -> {
                             val incoming = pageState.info.hanimeInfo
-                            _totalPages.value = pageState.info.maxPage
                             if (incoming.isEmpty()) {
                                 _state.value = PageLoadingState.NoMoreData
                             } else {

@@ -15,7 +15,7 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.ui.bridge.VideoPageHost
 import com.yenaly.han1meviewer.ui.viewmodel.CommentViewModel
 import com.yenaly.han1meviewer.ui.viewmodel.VideoViewModel
-import com.yenaly.han1meviewer.util.application
+import com.yenaly.yenaly_libs.utils.application
 
 @Composable
 fun VideoRouteContent(
@@ -32,11 +32,12 @@ fun VideoRouteContent(
     onNavigateToSearch: (String) -> Unit,
     onToggleSubscribe: (com.yenaly.han1meviewer.logic.model.HanimeVideo.Artist) -> Unit,
     onToggleFavorite: (com.yenaly.han1meviewer.logic.model.HanimeVideo) -> Unit,
+    onToggleLocalFavorite: (com.yenaly.han1meviewer.logic.model.HanimeVideo) -> Unit,
     onRateVideo: (com.yenaly.han1meviewer.logic.model.HanimeVideo, Boolean) -> Unit,
     onManageMyList: (com.yenaly.han1meviewer.logic.model.HanimeVideo.MyList?, List<Boolean>) -> Unit,
     onQuickCheckIn: (com.yenaly.han1meviewer.logic.entity.CheckInRecordEntity) -> Unit,
     onPrepareDownload: (String, com.yenaly.han1meviewer.logic.model.HanimeVideo?) -> Unit,
-    onConfirmDownloadPrompt: (com.yenaly.han1meviewer.logic.model.HanimeVideo?, String?) -> Unit,
+    onConfirmDownloadPrompt: (com.yenaly.han1meviewer.logic.model.HanimeVideo?) -> Unit,
     onRequestOpenOfficialDownloadPage: () -> Unit,
     onRequestOpenDownloadPermissionSettings: () -> Unit,
     onOpenWebPage: () -> Unit,
@@ -52,15 +53,11 @@ fun VideoRouteContent(
         PreferenceManager.getDefaultSharedPreferences(application)
             .getBoolean("disable_comments", false)
     }
-    val relatedAsTab = !fromDownload && com.yenaly.han1meviewer.Preferences.relatedVideoAsTab
-    val tabs = remember(disableComments, hostUiState.commentBadgeCount, fromDownload, relatedAsTab) {
+    val tabs = remember(disableComments, hostUiState.commentBadgeCount, fromDownload) {
         buildList {
-            add(VideoTabItem(VideoTabKind.INTRODUCTION, R.string.introduction))
+            add(VideoTabItem(R.string.introduction))
             if (!fromDownload && !disableComments) {
-                add(VideoTabItem(VideoTabKind.COMMENT, R.string.comment, badgeCount = hostUiState.commentBadgeCount))
-            }
-            if (relatedAsTab) {
-                add(VideoTabItem(VideoTabKind.RELATED, R.string.related_video))
+                add(VideoTabItem(R.string.comment, badgeCount = hostUiState.commentBadgeCount))
             }
         }
     }
@@ -75,62 +72,48 @@ fun VideoRouteContent(
             onSelectedTabChange = { videoViewModel.setSelectedTabIndex(videoCode, it) },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    bottom = with(LocalDensity.current)
-                    {
-                        hostUiState.appBarBottomInsetPx.coerceAtLeast(0).toDp()
-                    }
-                ),
+                .padding(bottom = with(LocalDensity.current) { hostUiState.appBarBottomInsetPx.toDp() }),
         ) { page ->
-            when (tabs.getOrNull(page)?.kind) {
-                VideoTabKind.INTRODUCTION -> {
-                    RenderVideoIntroductionContent(
-                        videoCode = videoCode,
-                        viewModel = videoViewModel,
-                        pendingDownloadPrompt = pendingDownloadPrompt,
-                        onPendingDownloadPromptChange = onPendingDownloadPromptChange,
-                        onOpenVideo = onOpenVideo,
-                        onOpenArtist = onOpenArtist,
-                        onNavigateToSearch = onNavigateToSearch,
-                        onToggleSubscribe = onToggleSubscribe,
-                        onToggleFavorite = onToggleFavorite,
-                        onRateVideo = onRateVideo,
-                        onManageMyList = onManageMyList,
-                        onQuickCheckIn = onQuickCheckIn,
-                        onPrepareDownload = onPrepareDownload,
-                        onConfirmDownloadPrompt = onConfirmDownloadPrompt,
-                        onRequestOpenOfficialDownloadPage = onRequestOpenOfficialDownloadPage,
-                        onRequestOpenDownloadPermissionSettings = onRequestOpenDownloadPermissionSettings,
-                        onOpenWebPage = onOpenWebPage,
-                        onOpenOriginalComic = onOpenOriginalComic,
-                        onOpenShare = onOpenShare,
-                        onCopyText = onCopyText,
-                        onIntroductionLinkClick = onIntroductionLinkClick,
-                        stringLongPressShare = stringLongPressShare,
-                    )
-                }
-
-                VideoTabKind.RELATED -> {
-                    RenderVideoRelatedContent(
-                        viewModel = videoViewModel,
-                        onOpenVideo = onOpenVideo,
-                    )
-                }
-
-                else -> {
-                    RenderVideoCommentContent(
-                        viewModel = commentViewModel,
-                        reportMessages = remember { kotlinx.coroutines.flow.MutableSharedFlow() },
-                        getMessageText = { message ->
-                            if (message.args.isNotEmpty()) {
-                                application.getString(message.resId, *message.args.toTypedArray())
-                            } else {
-                                application.getString(message.resId)
-                            }
-                        },
-                        pageHost = pageHost,
-                    )
-                }
+            if (page == 0) {
+                RenderVideoIntroductionContent(
+                    videoCode = videoCode,
+                    viewModel = videoViewModel,
+                    pendingDownloadPrompt = pendingDownloadPrompt,
+                    onPendingDownloadPromptChange = onPendingDownloadPromptChange,
+                    onOpenVideo = onOpenVideo,
+                    onOpenArtist = onOpenArtist,
+                    onNavigateToSearch = onNavigateToSearch,
+                    onToggleSubscribe = onToggleSubscribe,
+                    onToggleFavorite = onToggleFavorite,
+                    onToggleLocalFavorite = onToggleLocalFavorite,
+                    onRateVideo = onRateVideo,
+                    onManageMyList = onManageMyList,
+                    onQuickCheckIn = onQuickCheckIn,
+                    onPrepareDownload = onPrepareDownload,
+                    onConfirmDownloadPrompt = onConfirmDownloadPrompt,
+                    onRequestOpenOfficialDownloadPage = onRequestOpenOfficialDownloadPage,
+                    onRequestOpenDownloadPermissionSettings = onRequestOpenDownloadPermissionSettings,
+                    onOpenWebPage = onOpenWebPage,
+                    onOpenOriginalComic = onOpenOriginalComic,
+                    onOpenShare = onOpenShare,
+                    onCopyText = onCopyText,
+                    onIntroductionLinkClick = onIntroductionLinkClick,
+                    stringLongPressShare = stringLongPressShare,
+                )
+            } else {
+                RenderVideoCommentContent(
+                    viewModel = commentViewModel,
+                    reportMessages = remember { kotlinx.coroutines.flow.MutableSharedFlow() },
+                    getMessageText = { message ->
+                        if (message.args.isNotEmpty()) {
+                            application.getString(message.resId, *message.args.toTypedArray())
+                        } else {
+                            application.getString(message.resId)
+                        }
+                    },
+                    pageHost = pageHost,
+                    imeBottomInsetPx = hostUiState.imeBottomInsetPx,
+                )
             }
         }
     }

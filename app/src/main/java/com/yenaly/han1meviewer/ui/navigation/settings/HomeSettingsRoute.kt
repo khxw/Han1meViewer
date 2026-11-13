@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,14 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.firebase.Firebase
-import com.google.firebase.analytics.analytics
 import com.yenaly.han1meviewer.BuildConfig
 import com.yenaly.han1meviewer.HanimeConstants
 import com.yenaly.han1meviewer.HA1_GITHUB_FORUM_URL
@@ -50,25 +45,27 @@ import com.yenaly.han1meviewer.HanimeApplication
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.BackupManager
+import com.yenaly.han1meviewer.logic.StorageManager
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.settings.HomeSettingsScreen
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.AboutDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.LicenseDialog
 import com.yenaly.han1meviewer.ui.screen.settings.model.HomeSettingsUiState
 import com.yenaly.han1meviewer.ui.screen.home.homepage.defaultHomeCategoryPreferenceItems
 import com.yenaly.han1meviewer.ui.screen.home.homepage.hiddenHomeCategoryKeys
 import com.yenaly.han1meviewer.ui.screen.home.homepage.homeCategoryOrder
 import com.yenaly.han1meviewer.ui.screen.home.homepage.saveHomeCategoryPreferences
-import com.yenaly.han1meviewer.ui.screen.runAfterUiSettles
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
 import com.yenaly.han1meviewer.util.ThemeUtils
-import com.yenaly.han1meviewer.util.ActivityManager
-import com.yenaly.han1meviewer.util.applicationContext
-import com.yenaly.han1meviewer.util.browse
-import com.yenaly.han1meviewer.util.folderSize
+import com.yenaly.han1meviewer.util.showToast
+import com.yenaly.yenaly_libs.ActivityManager
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.yenaly_libs.utils.browse
+import com.yenaly.yenaly_libs.utils.folderSize
+import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -76,25 +73,30 @@ import kotlinx.coroutines.withContext
 private const val HOME_VIDEO_LANGUAGE = "video_language"
 private const val HOME_DEFAULT_VIDEO_QUALITY = "default_video_quality"
 private const val HOME_SHOW_PLAYED_INDICATOR = "show_played_indicator"
-private const val HOME_WATCHED_PROGRESS_THRESHOLD = "watched_progress_threshold"
-private const val HOME_SEARCH_PAGINATION = "search_pagination"
-private const val HOME_RELATED_VIDEO_AS_TAB = "related_video_as_tab"
 private const val HOME_ALLOW_PIP_MODE = "allow_pip_mode"
 private const val HOME_UPDATE_POPUP_INTERVAL_DAYS = "update_popup_interval_days"
+private const val HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS = "announcement_fetch_interval_hours"
 private const val HOME_USE_CI_UPDATE_CHANNEL = "use_ci_update_channel"
-private const val HOME_USE_ANALYTICS = "use_analytics"
 private const val HOME_FAKE_LAUNCHER_ICON = "pref_fake_launcher_icon"
 private const val HOME_USE_DARK_MODE = "use_dark_mode"
 private const val HOME_ALLOW_RESUME_PLAYBACK = "allow_resume_playback"
 private const val HOME_SEARCH_ARTIST_IGNORE_VIDEO_TYPE = "search_artist_ignore_video_type"
 private const val HOME_DISABLE_MOBILE_DATA_WARNING = "disable_mobile_data_warning"
-private const val HOME_DISABLE_PREDICTIVE_BACK = "disable_predictive_back"
-private const val HOME_SHOW_EXIT_CONFIRM = "show_exit_confirm"
+private const val HOME_COLLAPSE_DOWNLOADED_GROUP = "collapse_downloaded_group"
+private const val HOME_TABLET_MODE = "tablet_mode"
 private const val HOME_DISABLE_COMMENTS = "disable_comments"
+private const val HOME_CLIPBOARD_LINK_DETECT = "clipboard_link_detect"
+private const val HOME_BLOCK_TAGS_ENABLED = "block_tags_enabled"
+private const val HOME_BLOCKED_TAGS = "blocked_tags"
+private const val HOME_BLOCK_KEYWORDS_ENABLED = "block_keywords_enabled"
+private const val HOME_BLOCKED_KEYWORDS = "blocked_keywords"
+private const val HOME_COMMENT_KEYWORDS_ENABLED = "comment_keywords_enabled"
+private const val HOME_BLOCKED_COMMENT_KEYWORDS = "blocked_comment_keywords"
+private const val HOME_USE_BOTTOM_NAVIGATION = "use_bottom_navigation"
+private const val HOME_COMPACT_MODE = "compact_mode"
 private const val HOME_USE_LOCK_SCREEN = "use_lock_screen"
 private const val HOME_APP_LANGUAGE = "app_language"
 private const val HOME_THEME_COLOR = "theme_color"
-private const val HOME_PURE_BLACK_DARK_MODE = "pure_black_dark_mode"
 private const val HOME_SEARCH_GRID_COLUMNS_COMPACT = "search_grid_columns_compact"
 private const val HOME_SEARCH_GRID_COLUMNS_MEDIUM = "search_grid_columns_medium"
 private const val HOME_SEARCH_GRID_COLUMNS_EXPANDED = "search_grid_columns_expanded"
@@ -104,67 +106,26 @@ private const val HOME_HORIZONTAL_CARD_COUNT_COMPACT = "horizontal_card_count_co
 private const val HOME_HORIZONTAL_CARD_COUNT_MEDIUM = "horizontal_card_count_medium"
 private const val HOME_HORIZONTAL_CARD_COUNT_EXPANDED = "horizontal_card_count_expanded"
 
-@SuppressLint("LocalContextGetResourceValueCall")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsCategoryRouteScreen(
-    category: SettingsCategory,
+fun HomeSettingsRouteScreen(
     activity: MainActivity,
     onNavigateToPlayerSettings: () -> Unit,
-    onNavigateToHKeyframes: () -> Unit,
-    onNavigateToSharedHKeyframes: () -> Unit,
-    onNavigateToAboutPage: () -> Unit,
+    onNavigateToInteractionSettings: () -> Unit,
+    onNavigateToHKeyframeSettings: () -> Unit,
+    onNavigateToDownloadSettings: () -> Unit,
+    onNavigateToStorageManager: () -> Unit,
+    onNavigateToNetworkSettings: () -> Unit,
 ) {
-    when (category) {
-        SettingsCategory.Network -> {
-            NetworkSettingsRouteScreen()
-            return
-        }
-
-        SettingsCategory.Download -> {
-            DownloadSettingsRouteScreen(activity = activity)
-            return
-        }
-
-        SettingsCategory.Keyframes -> {
-            HKeyframeSettingsRouteScreen(
-                onNavigateToHKeyframes = onNavigateToHKeyframes,
-                onNavigateToSharedHKeyframes = onNavigateToSharedHKeyframes,
-            )
-            return
-        }
-
-        else -> Unit
-    }
-
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val versionState by AppViewModel.versionFlow.collectAsStateWithLifecycle()
     var refreshKey by remember { mutableIntStateOf(0) }
-    var cacheKey by remember { mutableIntStateOf(0) }
-    var showClearCacheConfirm by remember { mutableStateOf(false) }
     var showLicenseScreen by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
     var showRestartConfirmDialog by remember { mutableStateOf(false) }
-    var showAnalyticsDialog by remember { mutableStateOf(false) }
     var showLauncherPicker by remember { mutableStateOf(false) }
     var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
-
-    // 弹窗的选中回调会先更新 activeDialog 关闭弹窗；延迟两帧再重建 Activity，
-    // 避免 Activity.recreate() 阻塞主线程导致弹窗停留。
-    fun recreateAfterDialogDismiss() {
-        coroutineScope.runAfterUiSettles { activity.recreate() }
-    }
-
-    val backupExportSuccess = stringResource(R.string.backup_export_success)
-    val backupExportFailed = stringResource(R.string.backup_export_failed)
-    val requestPipAlert = stringResource(R.string.request_pip_alert)
-    val notSetSysLock = stringResource(R.string.not_set_sys_lock)
-    val cacheEmpty = stringResource(R.string.cache_empty)
-    val backupImportSuccess = stringResource(R.string.backup_import_success)
-    val backupImportFailed = stringResource(R.string.backup_import_failed)
-    val clearSuccess = stringResource(R.string.clear_success)
-    val clearFailed = stringResource(R.string.clear_failed)
-    val fakeIconHint = stringResource(R.string.fake_icon_hint)
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -172,8 +133,8 @@ fun SettingsCategoryRouteScreen(
         uri ?: return@rememberLauncherForActivityResult
         coroutineScope.launch(Dispatchers.IO) {
             runCatching { BackupManager.exportTo(context, uri) }
-                .onSuccess { withContext(Dispatchers.Main) { GlobalToasts.show(backupExportSuccess, level = GlobalToasts.ToastLevel.SUCCESS) } }
-                .onFailure { withContext(Dispatchers.Main) { GlobalToasts.show(backupExportFailed, level = GlobalToasts.ToastLevel.ERROR) } }
+                .onSuccess { withContext(Dispatchers.Main) { showShortToast(R.string.backup_export_success) } }
+                .onFailure { withContext(Dispatchers.Main) { showShortToast(R.string.backup_export_failed) } }
         }
     }
     val importLauncher = rememberLauncherForActivityResult(
@@ -191,68 +152,55 @@ fun SettingsCategoryRouteScreen(
         listOf(
             LauncherItem(
                 name = hanimeAppName,
-                iconRes = R.drawable.ic_launcher_new,
+                iconRes = R.drawable.launcher_preview_new,
                 alias = "com.yenaly.han1meviewer.LauncherAliasDefault",
             ),
             LauncherItem(
                 name = fakeNameCalc,
-                iconRes = R.drawable.ic_launcher_calc,
+                iconRes = R.drawable.launcher_preview_calc,
                 alias = "com.yenaly.han1meviewer.LauncherFakeCalc",
             ),
             LauncherItem(
                 name = fakeNameCornhub,
-                iconRes = R.drawable.ic_launcher_cornhub,
+                iconRes = R.drawable.launcher_preview_cornhub,
                 alias = "com.yenaly.han1meviewer.LauncherFakeCornhub",
             ),
             LauncherItem(
                 name = fakeNameXXT,
-                iconRes = R.drawable.ic_launcher_xxt,
+                iconRes = R.drawable.launcher_preview_xxt,
                 alias = "com.yenaly.han1meviewer.LauncherFakeXxt",
             ),
         )
     }
 
-    var cacheSummary by remember { mutableStateOf("") }
 
-    LaunchedEffect(cacheKey) {
-        cacheSummary = withContext(Dispatchers.IO) {
-            generateClearCacheSummary(context, context.cacheDir?.folderSize ?: 0L).toString()
-        }
-    }
+    val checkUpdateFailed = stringResource(R.string.check_update_failed)
+    val checkingUpdate = stringResource(R.string.checking_update)
+    val alreadyLatestUpdate = stringResource(R.string.already_latest_update)
 
     val updateSummary = remember(versionState, context) {
-        // 注意：versionState 是委托属性，只能在这里取一次快照，无法智能转换
-        when (val state = versionState) {
-            is WebsiteState.Error -> {
-                // 更新模块会把「限额耗尽 / 密钥失效 / 网络异常」等具体原因带在异常里，
-                // 优先展示具体原因，拿不到才回退到笼统的「检查更新失败，点击重试」
-                state.throwable.message?.takeIf { it.isNotBlank() }
-                    ?: context.getString(R.string.check_update_failed)
-            }
-
-            is WebsiteState.Loading -> context.getString(R.string.checking_update)
-
+        when (versionState) {
+            is WebsiteState.Error -> checkUpdateFailed
+            is WebsiteState.Loading -> checkingUpdate
             is WebsiteState.Success -> {
-                val info = state.info
+                val info = (versionState as WebsiteState.Success).info
                 if (info == null) {
-                    context.getString(R.string.already_latest_update)
+                    alreadyLatestUpdate
                 } else {
-                    context.getString(R.string.check_update_success, info.version)
+                    applicationContext.getString(R.string.check_update_success, info.version)
                 }
             }
         }
     }
-    val uiState = remember(refreshKey, updateSummary, cacheSummary, launcherItems, context) {
+    val uiState = remember(refreshKey, updateSummary, launcherItems, context) {
         buildHomeSettingsUiState(
             context = context,
             launcherItems = launcherItems,
             updateSummary = updateSummary,
-            cacheSummary = cacheSummary,
         )
     }
 
     HomeSettingsScreen(
-        category = category,
         state = uiState,
         onVideoLanguageChange = { value ->
             if (value != Preferences.videoLanguage) {
@@ -263,23 +211,18 @@ fun SettingsCategoryRouteScreen(
         onVideoQualityChange = { value ->
             saveString(HOME_DEFAULT_VIDEO_QUALITY, value)
             refreshKey++
-            GlobalToasts.show(context.getString(R.string.success_value, value), level = GlobalToasts.ToastLevel.SUCCESS)
+            context.showToast(R.string.success_value, value)
         },
         onDarkModeChange = { value ->
             if (value != Preferences.useDarkMode) {
                 saveString(HOME_USE_DARK_MODE, value)
-                // 立即刷新设置项状态；follow_system 与 always_off 在浅色系统下
-                // 可能不会触发 Activity 重建，必须手动刷新才能看到选择变化
-                refreshKey++
-                // AppCompatDelegate 会自行重建 Activity；先等待弹窗关闭再切换
-                coroutineScope.runAfterUiSettles {
-                    ThemeUtils.applyDarkModeFromPreferences(context)
-                }
+                ThemeUtils.applyDarkModeFromPreferences(context)
+                activity.recreate()
             }
         },
         onAllowPipModeChange = { enabled ->
             if (enabled && !isPipPermissionGranted(context)) {
-                GlobalToasts.show(requestPipAlert, level = GlobalToasts.ToastLevel.WARNING)
+                context.showToast(R.string.request_pip_alert)
                 openPipPermissionSettings(context)
                 saveBoolean(HOME_ALLOW_PIP_MODE, false)
                 refreshKey++
@@ -296,16 +239,44 @@ fun SettingsCategoryRouteScreen(
             saveBoolean(HOME_SHOW_PLAYED_INDICATOR, it)
             refreshKey++
         },
-        onWatchedProgressThresholdChange = {
-            saveInt(HOME_WATCHED_PROGRESS_THRESHOLD, it)
+        onClipboardLinkDetectChange = {
+            saveBoolean(HOME_CLIPBOARD_LINK_DETECT, it)
             refreshKey++
         },
-        onSearchPaginationChange = {
-            saveBoolean(HOME_SEARCH_PAGINATION, it)
+        onBlockTagsEnabledChange = {
+            saveBoolean(HOME_BLOCK_TAGS_ENABLED, it)
             refreshKey++
         },
-        onRelatedVideoAsTabChange = {
-            saveBoolean(HOME_RELATED_VIDEO_AS_TAB, it)
+        onBlockedTagsChange = { tags ->
+            saveBlockedTags(tags)
+            refreshKey++
+        },
+        onBlockKeywordsEnabledChange = {
+            saveBoolean(HOME_BLOCK_KEYWORDS_ENABLED, it)
+            refreshKey++
+        },
+        onBlockedKeywordsChange = { keywords ->
+            saveBlockedKeywords(keywords)
+            refreshKey++
+        },
+        onCommentKeywordsEnabledChange = {
+            saveBoolean(HOME_COMMENT_KEYWORDS_ENABLED, it)
+            refreshKey++
+        },
+        onBlockedCommentKeywordsChange = { keywords ->
+            saveBlockedCommentKeywords(keywords)
+            // 新增非空关键词时自动启用评论关键词屏蔽，避免用户添加后仍看不到效果。
+            if (keywords.isNotEmpty()) {
+                saveBoolean(HOME_COMMENT_KEYWORDS_ENABLED, true)
+            }
+            refreshKey++
+        },
+        onUseBottomNavigationChange = {
+            saveBoolean(HOME_USE_BOTTOM_NAVIGATION, it)
+            refreshKey++
+        },
+        onUseCompactModeChange = {
+            saveBoolean(HOME_COMPACT_MODE, it)
             refreshKey++
         },
         onSearchArtistIgnoreVideoTypeChange = {
@@ -316,16 +287,16 @@ fun SettingsCategoryRouteScreen(
             saveBoolean(HOME_DISABLE_MOBILE_DATA_WARNING, it)
             refreshKey++
         },
-        onDisablePredictiveBackChange = {
-            saveBoolean(HOME_DISABLE_PREDICTIVE_BACK, it)
-            refreshKey++
-        },
-        onShowExitConfirmChange = {
-            saveBoolean(HOME_SHOW_EXIT_CONFIRM, it)
+        onTabletModeChange = {
+            saveBoolean(HOME_TABLET_MODE, it)
             refreshKey++
         },
         onDisableCommentsChange = {
             saveBoolean(HOME_DISABLE_COMMENTS, it)
+            refreshKey++
+        },
+        onCollapseDownloadedGroupChange = {
+            saveBoolean(HOME_COLLAPSE_DOWNLOADED_GROUP, it)
             refreshKey++
         },
         onSearchGridColumnsConfigChange = { config ->
@@ -345,14 +316,7 @@ fun SettingsCategoryRouteScreen(
         onThemeColorChange = { key ->
             saveString(HOME_THEME_COLOR, key)
             refreshKey++
-            recreateAfterDialogDismiss()
-        },
-        onPureBlackDarkModeChange = { enabled ->
-            if (enabled != Preferences.pureBlackDarkMode) {
-                saveBoolean(HOME_PURE_BLACK_DARK_MODE, enabled)
-                refreshKey++
-                recreateAfterDialogDismiss()
-            }
+            activity.recreate()
         },
         onHomeCategoryPreferencesChange = { order, hiddenKeys ->
             saveHomeCategoryPreferences(order, hiddenKeys)
@@ -363,19 +327,15 @@ fun SettingsCategoryRouteScreen(
             refreshKey++
             AppViewModel.getLatestVersion()
         },
-        onUseAnalyticsChange = { value ->
-            if (!value) {
-                showAnalyticsDialog = true
-                return@HomeSettingsScreen
-            }
-            saveBoolean(HOME_USE_ANALYTICS, true)
-            refreshKey++
-            Firebase.analytics.setAnalyticsCollectionEnabled(true)
-        },
         onUseLockScreenChange = { value ->
             if (value) {
                 if (!isDeviceSecureCompat(context)) {
-                    GlobalToasts.show(notSetSysLock, level = GlobalToasts.ToastLevel.WARNING)
+                    context.showToast(R.string.not_set_sys_lock)
+                    refreshKey++
+                    return@HomeSettingsScreen
+                }
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    context.showToast(R.string.not_compact_lock_screen)
                     refreshKey++
                     return@HomeSettingsScreen
                 }
@@ -384,12 +344,17 @@ fun SettingsCategoryRouteScreen(
             refreshKey++
         },
         onOpenPlayerSettings = onNavigateToPlayerSettings,
+        onOpenInteractionSettings = onNavigateToInteractionSettings,
+        onOpenHKeyframeSettings = onNavigateToHKeyframeSettings,
+        onOpenDownloadSettings = onNavigateToDownloadSettings,
+        onOpenStorageManager = onNavigateToStorageManager,
+        onOpenNetworkSettings = onNavigateToNetworkSettings,
         onOpenAppLanguageSettings = { value ->
             val old = Preferences.preferenceSp.getString(HOME_APP_LANGUAGE, "system") ?: "system"
             if (old != value) {
                 Preferences.preferenceSp.edit { putString(HOME_APP_LANGUAGE, value) }
                 refreshKey++
-                recreateAfterDialogDismiss()
+                activity.recreate()
             }
         },
         onCheckUpdate = {
@@ -404,18 +369,21 @@ fun SettingsCategoryRouteScreen(
             Preferences.preferenceSp.edit { putInt(HOME_UPDATE_POPUP_INTERVAL_DAYS, it) }
             refreshKey++
         },
+        onAnnouncementFetchIntervalHoursChange = { hours ->
+            Preferences.preferenceSp.edit { putInt(HOME_ANNOUNCEMENT_FETCH_INTERVAL_HOURS, hours) }
+            refreshKey++
+        },
+        onOpenApplyDeepLinks = {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                showShortToast(R.string.action_app_open_by_default_settings_not_support)
+            } else {
+                showApplyDeepLinksDialog(context, activity)
+            }
+        },
         onOpenFakeLauncherIcon = { showLauncherPicker = true },
         onOpenOpenSourceLicense = { showLicenseScreen = true },
-        onOpenAboutPage = onNavigateToAboutPage,
-        onClearCache = {
-            val cacheDir = context.cacheDir
-            val folderSize = cacheDir?.folderSize ?: 0L
-            if (folderSize == 0L) {
-                GlobalToasts.show(cacheEmpty, level = GlobalToasts.ToastLevel.INFO)
-                return@HomeSettingsScreen
-            }
-            showClearCacheConfirm = true
-        },
+        onOpenAbout = { showAboutDialog = true },
+
         onExportBackup = {
             exportLauncher.launch("Han1meViewer-backup-${System.currentTimeMillis()}.json")
         },
@@ -439,14 +407,14 @@ fun SettingsCategoryRouteScreen(
                 runCatching { BackupManager.importFrom(context, uri) }
                     .onSuccess {
                         withContext(Dispatchers.Main) {
-                            GlobalToasts.show(backupImportSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+                            showShortToast(R.string.backup_import_success)
                             refreshKey++
                             activity.recreate()
                         }
                     }
                     .onFailure {
                         withContext(Dispatchers.Main) {
-                            GlobalToasts.show(backupImportFailed, level = GlobalToasts.ToastLevel.ERROR)
+                            showShortToast(R.string.backup_import_failed)
                         }
                     }
             }
@@ -454,30 +422,6 @@ fun SettingsCategoryRouteScreen(
         onDismiss = { pendingImportUri = null },
     )
 
-    ConfirmDialog(
-        visible = showClearCacheConfirm,
-        title = stringResource(R.string.sure_to_clear),
-        message = stringResource(R.string.sure_to_clear_cache),
-        confirmText = stringResource(R.string.confirm),
-        dismissText = stringResource(R.string.cancel),
-        onConfirm = {
-            showClearCacheConfirm = false
-            coroutineScope.launch(Dispatchers.IO) {
-                val cacheDir = context.cacheDir
-                val success = cacheDir?.deleteRecursively() == true
-                withContext(Dispatchers.Main) {
-                    cacheKey++
-                    refreshKey++
-                    if (success) {
-                        GlobalToasts.show(clearSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
-                    } else {
-                        GlobalToasts.show(clearFailed, level = GlobalToasts.ToastLevel.ERROR)
-                    }
-                }
-            }
-        },
-        onDismiss = { showClearCacheConfirm = false },
-    )
 
     if (showLicenseScreen) {
         LicenseDialog(
@@ -485,32 +429,9 @@ fun SettingsCategoryRouteScreen(
         )
     }
 
-    if (showAnalyticsDialog) {
-        val analyticsHtml = stringResource(R.string.about_analytics_summary)
-        val analyticsMessage = remember(analyticsHtml) {
-            AnnotatedString.fromHtml(analyticsHtml)
-        }
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.about_analytics)) },
-            text = {
-                Text(text = analyticsMessage)
-            },
-            confirmButton = {
-                TextButton(onClick = { showAnalyticsDialog = false }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    saveBoolean(HOME_USE_ANALYTICS, false)
-                    refreshKey++
-                    Firebase.analytics.setAnalyticsCollectionEnabled(false)
-                    showAnalyticsDialog = false
-                }) {
-                    Text(stringResource(R.string.deny))
-                }
-            },
+    if (showAboutDialog) {
+        AboutDialog(
+            onDismiss = { showAboutDialog = false }
         )
     }
 
@@ -522,10 +443,7 @@ fun SettingsCategoryRouteScreen(
         dismissText = stringResource(R.string.cancel),
         cancelable = false,
         onConfirm = {
-            showRestartConfirmDialog = false
-            coroutineScope.runAfterUiSettles {
-                ActivityManager.restart(killProcess = true)
-            }
+            ActivityManager.restart(killProcess = true)
         },
         onDismiss = { showRestartConfirmDialog = false },
     )
@@ -555,7 +473,7 @@ fun SettingsCategoryRouteScreen(
                                 (context.applicationContext as? HanimeApplication)?.switchLauncher(
                                     item.alias
                                 )
-                                GlobalToasts.show(fakeIconHint, level = GlobalToasts.ToastLevel.INFO)
+                                context.showToast(R.string.fake_icon_hint)
                                 refreshKey++
                                 showLauncherPicker = false
                             },
@@ -580,7 +498,6 @@ fun SettingsCategoryRouteScreen(
             }
         }
     }
-
 }
 
 private data class LauncherItem(
@@ -593,7 +510,6 @@ private fun buildHomeSettingsUiState(
     context: Context,
     launcherItems: List<LauncherItem>,
     updateSummary: String,
-    cacheSummary: String,
 ): HomeSettingsUiState {
     val currentAlias = Preferences.fakeLauncherIcon
     val currentItem = launcherItems.find { it.alias == currentAlias } ?: launcherItems.first()
@@ -606,6 +522,7 @@ private fun buildHomeSettingsUiState(
         "follow_system" -> context.getString(R.string.follow_system)
         "always_off" -> context.getString(R.string.always_off)
         "always_on" -> context.getString(R.string.always_on)
+        "always_amoled" -> context.getString(R.string.always_amoled)
         else -> Preferences.useDarkMode
     }
     val appLanguageValue =
@@ -631,21 +548,28 @@ private fun buildHomeSettingsUiState(
         allowPipMode = Preferences.preferenceSp.getBoolean(HOME_ALLOW_PIP_MODE, false),
         allowResumePlayback = Preferences.allowResumePlayback,
         showPlayedIndicator = Preferences.showPlayedIndicator,
-        watchedProgressThreshold = Preferences.watchedProgressThreshold,
-        searchPagination = Preferences.searchPagination,
-        relatedVideoAsTab = Preferences.relatedVideoAsTab,
         searchArtistIgnoreVideoType = Preferences.searchArtistIgnoreVideoType,
         disableMobileDataWarning = Preferences.disableMobileDataWarning,
-        disablePredictiveBack = Preferences.disablePredictiveBack,
-        showExitConfirm = Preferences.showExitConfirm,
+        tabletMode = Preferences.tabletMode,
         disableComments = Preferences.preferenceSp.getBoolean(HOME_DISABLE_COMMENTS, false),
+        clipboardLinkDetect = Preferences.clipboardLinkDetect,
+        blockTagsEnabled = Preferences.blockTagsEnabled,
+        blockedTags = Preferences.blockedTags,
+        blockedTagsCount = Preferences.blockedTags.size,
+        blockKeywordsEnabled = Preferences.blockKeywordsEnabled,
+        blockedKeywords = Preferences.blockedKeywords,
+        blockedKeywordsCount = Preferences.blockedKeywords.size,
+        commentKeywordsEnabled = Preferences.commentKeywordsEnabled,
+        blockedCommentKeywords = Preferences.blockedCommentKeywords,
+        blockedCommentKeywordsCount = Preferences.blockedCommentKeywords.size,
+        useBottomNavigation = Preferences.useBottomNavigation,
+        useCompactMode = Preferences.useCompactMode,
         collapseDownloadedGroup = Preferences.collapseDownloadedGroup,
+        useDynamicColor = Preferences.useDynamicColor,
         useCIUpdateChannel = Preferences.useCIUpdateChannel,
-        useAnalytics = Preferences.isAnalyticsEnabled,
         useLockScreen = Preferences.preferenceSp.getBoolean(HOME_USE_LOCK_SCREEN, false),
         fakeLauncherIconName = currentItem.name,
         updateSummary = updateSummary,
-        cacheSummary = cacheSummary,
         versionSummary = context.getString(
             R.string.current_version,
             "v${BuildConfig.VERSION_NAME}"
@@ -655,10 +579,14 @@ private fun buildHomeSettingsUiState(
             Preferences.updatePopupIntervalDays
         ),
         updatePopupIntervalDays = Preferences.updatePopupIntervalDays,
+        announcementFetchIntervalHours = Preferences.announcementFetchIntervalHours,
+        announcementFetchIntervalLabel = announcementFetchIntervalLabel(
+            context,
+            Preferences.announcementFetchIntervalHours
+        ),
         dynamicColorEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
         themeColorKey = Preferences.themeColor ?: ThemeColorPreset.DEFAULT.key,
         themeColorName = context.getString(ThemeColorPreset.fromKey(Preferences.themeColor).displayNameRes),
-        pureBlackDarkMode = Preferences.pureBlackDarkMode,
         searchGridColumnsSummary = listOf(
             searchGridColumnsConfig.compactColumns,
             searchGridColumnsConfig.mediumColumns,
@@ -678,4 +606,31 @@ private fun buildHomeSettingsUiState(
         hiddenHomeCategoryKeys = hiddenHomeCategoryKeys,
         useAvHomeCategoryTitles = Preferences.baseUrl == HanimeConstants.HANIME_URL[3],
     )
+}
+
+private fun saveBlockedTags(tags: Set<String>) {
+    Preferences.preferenceSp.edit {
+        putString(
+            HOME_BLOCKED_TAGS,
+            tags.filter { it.isNotBlank() }.joinToString(",")
+        )
+    }
+}
+
+private fun saveBlockedKeywords(keywords: Set<String>) {
+    Preferences.preferenceSp.edit {
+        putString(
+            HOME_BLOCKED_KEYWORDS,
+            keywords.filter { it.isNotBlank() }.joinToString(",")
+        )
+    }
+}
+
+private fun saveBlockedCommentKeywords(keywords: Set<String>) {
+    Preferences.preferenceSp.edit {
+        putString(
+            HOME_BLOCKED_COMMENT_KEYWORDS,
+            keywords.filter { it.isNotBlank() }.joinToString(",")
+        )
+    }
 }

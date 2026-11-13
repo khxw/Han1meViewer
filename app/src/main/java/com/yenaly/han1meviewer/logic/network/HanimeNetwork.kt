@@ -47,10 +47,12 @@ object HanimeNetwork {
         get() = ServiceCreator.create<HanimeSubscriptionService>(HANIME_BASE_URL)
 
     fun rebuildNetwork() {
+        NetworkRateLimitManager.reset()
         ServiceCreator.rebuildOkHttpClient()
         hanimeService = _hanimeService
         getchuService = _getchuService
         commentService = _commentService
         myListService = _myListService
+        subscriptionService = _subscriptionService
     }
 }

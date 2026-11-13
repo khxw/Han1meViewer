@@ -7,6 +7,29 @@ import okhttp3.Cookie
 @JvmInline
 value class CookieString(val cookie: String)
 
+internal fun String?.cookieValue(name: String): String? {
+    if (this.isNullOrBlank()) return null
+    return split(';').firstNotNullOfOrNull { part ->
+        val trimmed = part.trim()
+        val separator = trimmed.indexOf('=')
+        if (separator <= 0 || !trimmed.substring(0, separator).equals(name, ignoreCase = true)) {
+            null
+        } else {
+            trimmed.substring(separator + 1).trim().takeIf { it.isNotEmpty() }
+        }
+    }
+}
+
+internal fun String?.hasHanimeLoginSession(): Boolean {
+    if (this.isNullOrBlank()) return false
+    return split(';').any { part ->
+        val name = part.substringBefore('=', "").trim()
+        name.equals("hanime1_session", ignoreCase = true) ||
+            name.equals("laravel_session", ignoreCase = true) ||
+            name.startsWith("remember_web_", ignoreCase = true)
+    }
+}
+
 /**
  * 主要用於 [HCookieJar][com.yenaly.han1meviewer.logic.network.HCookieJar]，最好不要用到其他地方。
  */

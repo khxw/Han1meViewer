@@ -47,11 +47,6 @@ const val VIDEO_COMMENT_PREFIX = "video"
 
 const val PREVIEW_COMMENT_PREFIX = "preview"
 
-/**
- * 新番預告在搜索頁中的類型名稱。
- */
-const val NEW_ANIME_PREVIEW_GENRE = "新番預告"
-
 // base url
 
 @JvmField
@@ -69,29 +64,9 @@ object HanimeConstants {
 @JvmField
 val HANIME_LOGIN_URL = HANIME_BASE_URL + "login"
 
-// 媒體 CDN
-
-/**
- * 主站影片與圖片使用的 CDN 主機，部分地區可能無法訪問。
- */
-const val HANIME_MEDIA_CDN_HOST = "vdownload.hembed.com"
-
-/**
- * 備用媒體 CDN 主機，用於替換 [HANIME_MEDIA_CDN_HOST]。
- */
-const val HANIME_BACKUP_MEDIA_CDN_HOST = "1497203185.rsc.cdn77.org"
-
-/**
- * 啟用備用媒體 CDN 後，將回應內容中的媒體（圖片 / 影片）CDN 主機替換為備用主機。
- */
-fun String.replaceBackupMediaCdnHost(): String {
-    if (!Preferences.useBackupMediaCdn) return this
-    return replace(HANIME_MEDIA_CDN_HOST, HANIME_BACKUP_MEDIA_CDN_HOST, ignoreCase = true)
-}
-
 // github url
 
-const val HA1_GITHUB_URL = "https://github.com/misaka10032w/Han1meViewer"
+const val HA1_GITHUB_URL = "https://github.com/5APU-A340/Han1meViewer-Remastered"
 
 const val HA1_GITHUB_ISSUE_URL = "$HA1_GITHUB_URL/issues"
 
@@ -99,8 +74,14 @@ const val HA1_GITHUB_FORUM_URL = "$HA1_GITHUB_URL/discussions"
 
 const val HA1_GITHUB_RELEASES_URL = "$HA1_GITHUB_URL/releases"
 
-const val HA1_GITHUB_API_URL = "https://api.github.com/repos/misaka10032w/Han1meViewer/"
-const val FIREBASE_REALTIME_DATABASE = "https://han1meviewer-86e5f-default-rtdb.asia-southeast1.firebasedatabase.app/"
+const val HA1_GITHUB_API_URL = "https://api.github.com/repos/5APU-A340/Han1meViewer-Remastered/"
+
+/**
+ * 重制版自托管公告源（仓库根目录的 announcements.json，通过 raw CDN 拉取）。
+ * 维护者提交/修改该文件即可发布或下架公告。
+ */
+const val HA1_ANNOUNCEMENTS_URL =
+    "https://raw.githubusercontent.com/5APU-A340/Han1meViewer-Remastered/main/announcements.json"
 // for Shared Preference
 
 const val LOGIN_COOKIE = "cookie"

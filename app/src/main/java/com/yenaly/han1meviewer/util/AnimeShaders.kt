@@ -17,14 +17,16 @@ object AnimeShaders {
         "Anime4K_AutoDownscalePre_x4.glsl",
         "Anime4K_Upscale_CNN_x2_M.glsl"
     )
-    // 超分辨率滤镜 (效率) A+A
-    val mpvSuperResolutionLiteArray = arrayOf(
+    // 超分辨率滤镜 (均衡) A：官方移动端推荐链，介于性能与质量之间
+    val mpvSuperResolutionBalancedArray = arrayOf(
         "Anime4K_Clamp_Highlights.glsl",
         "Anime4K_Restore_CNN_M.glsl",
+        "Anime4K_Upscale_CNN_x2_M.glsl"
+    )
+    // 超分辨率滤镜 (效率) C：移动端轻量链，使用 S 模型减少 GPU 压力
+    val mpvSuperResolutionLiteArray = arrayOf(
+        "Anime4K_Clamp_Highlights.glsl",
         "Anime4K_Restore_CNN_S.glsl",
-        "Anime4K_Upscale_CNN_x2_M.glsl",
-        "Anime4K_AutoDownscalePre_x2.glsl",
-        "Anime4K_AutoDownscalePre_x4.glsl",
         "Anime4K_Upscale_CNN_x2_S.glsl"
     )
 
@@ -71,12 +73,18 @@ object AnimeShaders {
         val shaderFiles = when (type) {
             // 效率
             1 -> mpvSuperResolutionLiteArray
+            // 均衡
+            2 -> mpvSuperResolutionBalancedArray
             // 质量
-            2 -> mpvSuperResolutionArray
+            3 -> mpvSuperResolutionArray
             else -> throw IllegalArgumentException("未知 Shader 类型: $type")
         }
         return shaderFiles.joinToString(separator = ":") { shaderFile ->
-            File(shadersDir, shaderFile).absolutePath
+            File(shadersDir, shaderFile).absolutePath.also { path ->
+                if (!File(path).isFile) {
+                    throw IllegalStateException("Shader 文件不存在: $path")
+                }
+            }
         }
     }
 

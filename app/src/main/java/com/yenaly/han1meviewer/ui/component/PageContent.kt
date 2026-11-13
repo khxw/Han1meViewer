@@ -1,5 +1,12 @@
 package com.yenaly.han1meviewer.ui.component
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -36,14 +43,36 @@ fun PageContent(
     },
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier) {
-        when {
-            isError -> error()
-            isLoading -> loading()
-            isEmpty -> empty()
-            else -> content()
+    val targetState = when {
+        isError -> PageContentState.Error
+        isLoading -> PageContentState.Loading
+        isEmpty -> PageContentState.Empty
+        else -> PageContentState.Content
+    }
+    AnimatedContent(
+        targetState = targetState,
+        modifier = modifier,
+        transitionSpec = {
+            (fadeIn(tween(260)) + slideInVertically(tween(300)) { it / 24 }) togetherWith
+                (fadeOut(tween(160)) + slideOutVertically(tween(180)) { -it / 30 })
+        },
+        contentKey = { it },
+        label = "page-content-transition",
+    ) { state ->
+        when (state) {
+            PageContentState.Error -> error()
+            PageContentState.Loading -> loading()
+            PageContentState.Empty -> empty()
+            PageContentState.Content -> content()
         }
     }
+}
+
+private enum class PageContentState {
+    Loading,
+    Error,
+    Empty,
+    Content,
 }
 
 val <T> PageState<T>.isFirstPageLoading: Boolean

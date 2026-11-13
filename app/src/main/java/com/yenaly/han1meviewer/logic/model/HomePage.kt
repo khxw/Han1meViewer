@@ -1,10 +1,13 @@
 package com.yenaly.han1meviewer.logic.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * @project Hanime1
  * @author Yenaly Liew
  * @time 2022/06/08 008 22:45
  */
+@Serializable
 data class HomePage(
     val csrfToken: String?,
     val avatarUrl: String?,
@@ -26,6 +29,7 @@ data class HomePage(
     val timestamp: Long = System.currentTimeMillis(),
     val userId: String
 ) {
+    @Serializable
     data class Banner(
         val title: String,
         val description: String?,

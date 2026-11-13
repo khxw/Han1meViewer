@@ -18,7 +18,6 @@ fun FavVideoRouteScreen(
     val items = fav.favVideoFlow.collectAsStateWithLifecycle().value
     val state = fav.favVideoStateFlow.collectAsStateWithLifecycle().value
     val loadedPageCount = fav.loadedPageCount.collectAsStateWithLifecycle().value
-    val totalPages = fav.totalPages.collectAsStateWithLifecycle().value
     val isLoadingMore = fav.isLoadingMore.collectAsStateWithLifecycle().value
 
     VideoGridScreen(
@@ -26,7 +25,6 @@ fun FavVideoRouteScreen(
         state = state,
         deleteStateFlow = fav.deleteMyFavVideoFlow,
         loadedPageCount = loadedPageCount,
-        totalPages = totalPages,
         isLoadingMore = isLoadingMore,
         titleRes = R.string.fav_video,
         helpMessageRes = R.string.long_press_to_cancel_fav,
@@ -34,7 +32,8 @@ fun FavVideoRouteScreen(
         onBack = onBack,
         onOpenVideo = { onNavigateToVideo(it.videoCode) },
         onDeleteItem = { item ->
-            fav.deleteMyFavVideo(item.videoCode)
+            val position = items.indexOfFirst { it.videoCode == item.videoCode }
+            if (position >= 0) fav.deleteMyFavVideo(item.videoCode, position)
         },
         onRefresh = {
             fav.favVideoPage = 1
@@ -44,11 +43,6 @@ fun FavVideoRouteScreen(
         },
         onLoadMore = {
             val page = fav.favVideoPage
-            fav.getMyFavVideoItems(Preferences.savedUserId, page)
-            fav.favVideoPage = page + 1
-        },
-        onGoToPage = { page ->
-            fav.clearMyListItems()
             fav.getMyFavVideoItems(Preferences.savedUserId, page)
             fav.favVideoPage = page + 1
         },
@@ -65,7 +59,6 @@ fun WatchLaterRouteScreen(
     val items = wl.watchLaterFlow.collectAsStateWithLifecycle().value
     val state = wl.watchLaterStateFlow.collectAsStateWithLifecycle().value
     val loadedPageCount = wl.loadedPageCount.collectAsStateWithLifecycle().value
-    val totalPages = wl.totalPages.collectAsStateWithLifecycle().value
     val isLoadingMore = wl.isLoadingMore.collectAsStateWithLifecycle().value
 
     VideoGridScreen(
@@ -73,7 +66,6 @@ fun WatchLaterRouteScreen(
         state = state,
         deleteStateFlow = wl.deleteMyWatchLaterFlow,
         loadedPageCount = loadedPageCount,
-        totalPages = totalPages,
         isLoadingMore = isLoadingMore,
         titleRes = R.string.watch_later,
         helpMessageRes = R.string.long_press_to_cancel_watch_later,
@@ -81,7 +73,8 @@ fun WatchLaterRouteScreen(
         onBack = onBack,
         onOpenVideo = { onNavigateToVideo(it.videoCode) },
         onDeleteItem = { item ->
-            wl.deleteMyWatchLater(item.videoCode)
+            val position = items.indexOfFirst { it.videoCode == item.videoCode }
+            if (position >= 0) wl.deleteMyWatchLater(item.videoCode, position)
         },
         onRefresh = {
             wl.watchLaterPage = 1
@@ -91,11 +84,6 @@ fun WatchLaterRouteScreen(
         },
         onLoadMore = {
             val page = wl.watchLaterPage
-            wl.getMyWatchLaterItems(page)
-            wl.watchLaterPage = page + 1
-        },
-        onGoToPage = { page ->
-            wl.clearMyListItems()
             wl.getMyWatchLaterItems(page)
             wl.watchLaterPage = page + 1
         },

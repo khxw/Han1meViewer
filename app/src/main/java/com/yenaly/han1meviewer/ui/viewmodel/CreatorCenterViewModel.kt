@@ -12,7 +12,8 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.MyListItems
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.screen.home.creatorcenter.CreatorCenterUiState
-import com.yenaly.han1meviewer.base.BaseViewModel
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.base.YenalyViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CreatorCenterViewModel(application: Application) : BaseViewModel(application) {
+class CreatorCenterViewModel(application: Application) : YenalyViewModel(application) {
 
     private val _selectedTab = MutableStateFlow(CreatorTab.Uploaded)
 
@@ -37,9 +38,6 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
     private val _uploadedPage = MutableStateFlow(0)
     private val _uploadingPage = MutableStateFlow(0)
 
-    private val _uploadedTotalPages = MutableStateFlow(1)
-    private val _uploadingTotalPages = MutableStateFlow(1)
-
     private val _uploadedLoadingMore = MutableStateFlow(false)
     private val _uploadingLoadingMore = MutableStateFlow(false)
 
@@ -53,7 +51,6 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
         _uploadedState, _uploadingState,
         _uploadedSort, _uploadingSort,
         _uploadedPage, _uploadingPage,
-        _uploadedTotalPages, _uploadingTotalPages,
         _uploadedLoadingMore, _uploadingLoadingMore,
     ) { array ->
         @Suppress("UNCHECKED_CAST")
@@ -67,10 +64,8 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
             uploadingSort = array[6] as CreatorSort,
             uploadedPage = array[7] as Int,
             uploadingPage = array[8] as Int,
-            uploadedTotalPages = array[9] as Int,
-            uploadingTotalPages = array[10] as Int,
-            uploadedLoadingMore = array[11] as Boolean,
-            uploadingLoadingMore = array[12] as Boolean,
+            uploadedLoadingMore = array[9] as Boolean,
+            uploadingLoadingMore = array[10] as Boolean,
         )
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CreatorCenterUiState())
@@ -93,15 +88,6 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
         loadUploadedPage(_uploadedPage.value + 1)
     }
 
-    fun goToPageUploaded(page: Int) {
-        if (_uploadedLoadingMore.value) return
-        uploadedRefreshing = true
-        _uploadedPage.value = 0
-        _uploadedItems.value = emptyList()
-        _uploadedState.value = PageLoadingState.Loading
-        loadUploadedPage(page)
-    }
-
     fun refreshUploading(sort: CreatorSort = _uploadingSort.value) {
         _uploadingSort.value = sort
         uploadingRefreshing = true
@@ -114,15 +100,6 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
     fun loadMoreUploading() {
         if (_uploadingLoadingMore.value || _uploadingState.value is PageLoadingState.Loading || _uploadingState.value is PageLoadingState.NoMoreData) return
         loadUploadingPage(_uploadingPage.value + 1)
-    }
-
-    fun goToPageUploading(page: Int) {
-        if (_uploadingLoadingMore.value) return
-        uploadingRefreshing = true
-        _uploadingPage.value = 0
-        _uploadingItems.value = emptyList()
-        _uploadingState.value = PageLoadingState.Loading
-        loadUploadingPage(page)
     }
 
     fun isLoggedIn(): Boolean = Preferences.isAlreadyLogin && Preferences.savedUserId.isNotBlank()
@@ -140,8 +117,7 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
                 _uploadedItems.update { previous ->
                     when (state) {
                         is PageLoadingState.Success -> {
-                            val incoming = state.info.hanimeInfo
-                            _uploadedTotalPages.value = state.info.maxPage
+                            val incoming = markWatchedList(state.info.hanimeInfo)
                             if (incoming.isEmpty()) {
                                 _uploadedState.value = PageLoadingState.NoMoreData
                             } else {
@@ -179,7 +155,6 @@ class CreatorCenterViewModel(application: Application) : BaseViewModel(applicati
                     when (state) {
                         is PageLoadingState.Success -> {
                             val incoming = state.info.hanimeInfo
-                            _uploadingTotalPages.value = state.info.maxPage
                             if (incoming.isEmpty()) {
                                 _uploadingState.value = PageLoadingState.NoMoreData
                             } else {

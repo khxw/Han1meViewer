@@ -3,10 +3,6 @@ package com.yenaly.han1meviewer.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
-import com.google.firebase.Firebase
-import com.google.firebase.crashlytics.crashlytics
-import com.google.firebase.crashlytics.setCustomKeys
-import com.yenaly.han1meviewer.FirebaseConstants
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.model.github.Latest
@@ -14,8 +10,8 @@ import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.worker.HUpdateWorker
 import com.yenaly.han1meviewer.worker.HanimeDownloadManagerV2
 import com.yenaly.han1meviewer.worker.HanimeDownloadWorker
-import com.yenaly.han1meviewer.base.BaseViewModel
-import com.yenaly.han1meviewer.util.application
+import com.yenaly.yenaly_libs.base.YenalyViewModel
+import com.yenaly.yenaly_libs.utils.application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,7 +25,7 @@ import kotlinx.coroutines.launch
  * @author Yenaly Liew
  * @time 2024/03/29 029 18:00
  */
-object AppViewModel : BaseViewModel(application), IHCsrfToken {
+object AppViewModel : YenalyViewModel(application), IHCsrfToken {
 
     /**
      * csrfToken 全局唯一，只需要在首页拉起或点击视频页时更新一下就可以了
@@ -49,16 +45,12 @@ object AppViewModel : BaseViewModel(application), IHCsrfToken {
         WorkManager.getInstance(application).pruneWork()
 
         viewModelScope.launch(Dispatchers.IO) {
-            // HanimeDownloadManager.init()
             HanimeDownloadManagerV2.init()
         }
 
         viewModelScope.launch(Dispatchers.Main) {
             Preferences.loginStateFlow.collect { isLogin ->
                 Log.d("LoginState", "isLogin: $isLogin")
-                Firebase.crashlytics.setCustomKeys {
-                    key(FirebaseConstants.LOGIN_STATE, isLogin)
-                }
             }
         }
 
@@ -70,9 +62,6 @@ object AppViewModel : BaseViewModel(application), IHCsrfToken {
             HanimeDownloadWorker.getRunningWorkInfoCount(application).collect { count ->
                 Log.d(HanimeDownloadWorker.TAG, "getRunningWorkInfoCount: $count")
                 runningWorkInfoCountFlow.value = count
-                Firebase.crashlytics.setCustomKeys {
-                    key(FirebaseConstants.RUNNING_DOWNLOAD_WORK_COUNT, count)
-                }
             }
         }
     }

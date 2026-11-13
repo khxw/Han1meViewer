@@ -27,12 +27,14 @@ object Config {
          * @return 版本号和版本名
          *
          *         Example:
-         *         ci: 0.1.2-ci+21032500
-         *         release: 0.1.2-release+21032500
+         *         release: 0.1.2
          *         debug (fixed): debug+1
          */
         fun Project.createVersion(
-            major: Int, minor: Int, patch: Int
+            major: Int,
+            minor: Int,
+            patch: Int,
+            versionCodePatch: Int = patch,
         ): Pair<Int, String> {
             val source = this.source
             val versionCode: Int
@@ -44,10 +46,13 @@ object Config {
                 }
 
                 else -> {
+                    // 日期保证跨天递增，versionCodePatch 保证同一日期内严格递增。
+                    // 显示版本与 versionCode 后缀可独立，避免语义化版本降号时被 Android 判定为降级。
+                    // 例：2026-09-13 + versionCodePatch 65 -> 260913065。
                     versionCode = LocalDateTime.now(Clock.systemUTC()).format(
-                        DateTimeFormatter.ofPattern("yyMMddHH")
-                    ).toInt()
-                    versionName = "${major}.${minor}.${patch}-$source+$versionCode"
+                        DateTimeFormatter.ofPattern("yyMMdd")
+                    ).toInt() * 1000 + versionCodePatch
+                    versionName = "${major}.${minor}.${patch}"
                 }
             }
             return versionCode to versionName

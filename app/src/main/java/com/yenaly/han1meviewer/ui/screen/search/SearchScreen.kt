@@ -11,11 +11,19 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,8 +76,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -85,16 +95,15 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.HanimeInfo.Companion.NORMAL
 import com.yenaly.han1meviewer.logic.model.SearchOption
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
-import com.yenaly.han1meviewer.ui.component.PaginationPager
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
-import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
+import com.yenaly.han1meviewer.ui.screen.videoCompactMinWidth
+import com.yenaly.han1meviewer.ui.screen.videoGridSpacing
+import com.yenaly.han1meviewer.ui.screen.videoSimplifiedCompactMinWidth
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
-import com.yenaly.han1meviewer.ui.theme.VideoNormalCardMinWidth
-import com.yenaly.han1meviewer.ui.theme.VideoSimplifiedCardMinWidth
 import com.yenaly.han1meviewer.ui.viewmodel.SearchViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -123,8 +132,6 @@ fun SearchScreen(
 ) {
     val searchState by viewModel.searchStateFlow.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchFlow.collectAsStateWithLifecycle()
-    val totalPages by viewModel.totalPagesFlow.collectAsStateWithLifecycle()
-    val currentPage by viewModel.pageFlow.collectAsStateWithLifecycle()
 
     var searchQuery by rememberSaveable(initialQuery) { mutableStateOf(initialQuery ?: "") }
     var histories by remember { mutableStateOf<List<SearchHistoryEntity>>(emptyList()) }
@@ -144,7 +151,6 @@ fun SearchScreen(
     val kb = LocalSoftwareKeyboardController.current
     val scope = rememberCoroutineScope()
     val showPlayedIndicator = Preferences.showPlayedIndicator
-    val searchPagination = Preferences.searchPagination
 
     // 搜索执行
     fun executeSearch() {
@@ -185,7 +191,7 @@ fun SearchScreen(
     }
 
     val hasSearchResults = searchResults.isNotEmpty() ||
-            ((searchState as? PageLoadingState.Success)?.info?.list?.isNotEmpty() == true)
+            ((searchState as? PageLoadingState.Success)?.info?.isNotEmpty() == true)
     val filter = remember(
         viewModel.genre,
         viewModel.sort,
@@ -396,31 +402,20 @@ fun SearchScreen(
             if (hasSearched) {
                 // 已触发搜索，显示结果
                 val showResults = searchResults.ifEmpty {
-                    (searchState as? PageLoadingState.Success)?.info?.list ?: emptyList()
+                    (searchState as? PageLoadingState.Success)?.info ?: emptyList()
                 }
                 Box(Modifier.fillMaxSize()) {
                     if (!isRefreshing) SearchStateIndicator(searchState, showResults.size)
-                    if (showResults.isNotEmpty()) {
-                        SearchResultsGrid(
-                            showResults,
-                            searchState,
-                            showPlayedIndicator,
-                            onOpenVideo,
-                            onLongPressCopy,
-                            { viewModel.page++; executeSearch() },
-                            !searchPagination && searchState !is PageLoadingState.NoMoreData,
-                            gridState,
-                            pagination = if (searchPagination) SearchPagination(
-                                currentPage = currentPage,
-                                totalPages = totalPages,
-                                onPageSelected = { newPage ->
-                                    viewModel.page = newPage
-                                    executeSearch()
-                                    scope.launch { gridState.scrollToItem(0) }
-                                },
-                            ) else null,
-                        )
-                    }
+                    if (showResults.isNotEmpty()) SearchResultsGrid(
+                        showResults,
+                        searchState,
+                        showPlayedIndicator,
+                        onOpenVideo,
+                        onLongPressCopy,
+                        { viewModel.page++; executeSearch() },
+                        searchState !is PageLoadingState.NoMoreData,
+                        gridState
+                    )
                 }
             } else if (searchQuery.isBlank() && histories.isNotEmpty()) {
                 // 未搜索 + 搜索框为空 → 显示历史
@@ -596,19 +591,12 @@ fun SearchHistoryList(
 // 搜索结果网格
 // ─────────────────────────────────────────────
 
-data class SearchPagination(
-    val currentPage: Int,
-    val totalPages: Int,
-    val onPageSelected: (Int) -> Unit,
-)
-
 @Composable
 fun SearchResultsGrid(
     videos: List<HanimeInfo>, state: PageLoadingState<*>, showPlayedIndicator: Boolean,
     onVideoClick: (String) -> Unit,
     onVideoLongClick: (String, String) -> Unit, onLoadMore: () -> Unit,
-    canLoadMore: Boolean, gridState: LazyGridState, modifier: Modifier = Modifier,
-    pagination: SearchPagination? = null,
+    canLoadMore: Boolean, gridState: LazyGridState, modifier: Modifier = Modifier
 ) {
     var isLoadingMore by remember { mutableStateOf(false) }
     LaunchedEffect(gridState, videos.size) {
@@ -623,21 +611,33 @@ fun SearchResultsGrid(
     LaunchedEffect(state) { if (state !is PageLoadingState.Loading) isLoadingMore = false }
     Box(modifier = modifier.fillMaxSize()) {
         val useNormalGrid = videos.firstOrNull()?.itemType == NORMAL
-        val columns = rememberVideoGridColumns(
-            minCardWidth = if (useNormalGrid) {
-                VideoNormalCardMinWidth
-            } else {
-                VideoSimplifiedCardMinWidth
-            },
-        )
+        val density = LocalDensity.current
+        val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp().value.toInt() }
+        val columns = if (Preferences.tabletMode) {
+            val base = Preferences.searchGridColumnsConfig.columnsForWidthDp(screenWidthDp)
+            GridCells.Fixed(if (Preferences.useCompactMode) base + 1 else base)
+        } else {
+            GridCells.Adaptive(
+                minSize = if (useNormalGrid) videoCompactMinWidth else videoSimplifiedCompactMinWidth,
+            )
+        }
 
+        // 底部导航栏模式下为悬浮导航栏预留空间，保证网格末尾可滚至导航栏上方
+        val bottomNavReserved = if (Preferences.useBottomNavigation) {
+            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 112.dp
+        } else 0.dp
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = columns,
             state = gridState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(SpacingNormal),
-            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-            verticalArrangement = Arrangement.spacedBy(SpacingNormal)
+            contentPadding = PaddingValues(
+                start = videoGridSpacing,
+                top = videoGridSpacing,
+                end = videoGridSpacing,
+                bottom = videoGridSpacing + bottomNavReserved,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(videoGridSpacing),
+            verticalArrangement = Arrangement.spacedBy(videoGridSpacing)
         ) {
             items(videos, key = { it.videoCode }) {
                 VideoCardItem(
@@ -661,16 +661,6 @@ fun SearchResultsGrid(
                     }
                 }
             }
-            if (pagination != null) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    PaginationPager(
-                        currentPage = pagination.currentPage,
-                        totalPages = pagination.totalPages,
-                        onPageSelected = pagination.onPageSelected,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-            }
         }
     }
 }
@@ -687,7 +677,15 @@ fun SearchStateIndicator(
     modifier: Modifier = Modifier
 ) {
     val loadingHint = rememberRandomLoadingHint()
-    when (state) {
+    AnimatedContent(
+        targetState = state,
+        transitionSpec = {
+            fadeIn(tween(220)) togetherWith fadeOut(tween(140))
+        },
+        contentKey = { it::class },
+        label = "search-state",
+    ) { current ->
+        when (current) {
         is PageLoadingState.Loading -> if (resultCount == 0) Box(
             modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -715,15 +713,15 @@ fun SearchStateIndicator(
         is PageLoadingState.Error -> EmptyContent(
             hint = stringResource(
                 R.string.search_load_failed_with_reason,
-                state.throwable.message.orEmpty()
+                current.throwable.message.orEmpty()
             ),
             picRes = R.drawable.h_chan_sad
         )
-
-        is PageLoadingState.Success -> if (resultCount == 0) EmptyContent(
-            hint = stringResource(R.string.search_no_results),
-            picRes = R.drawable.h_chan_speechless
-        )
+            is PageLoadingState.Success -> if (resultCount == 0) EmptyContent(
+                hint = stringResource(R.string.search_no_results),
+                picRes = R.drawable.h_chan_speechless
+            )
+        }
     }
 }
 

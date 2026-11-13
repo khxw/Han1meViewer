@@ -84,13 +84,6 @@ fun CreatorCenterScreen(
                 }
             }
 
-            is CreatorCenterEvent.OnGoToPage -> {
-                when (event.tab) {
-                    CreatorTab.Uploaded -> viewModel.goToPageUploaded(event.page)
-                    CreatorTab.Uploading -> viewModel.goToPageUploading(event.page)
-                }
-            }
-
             is CreatorCenterEvent.OnRefresh -> {
                 when (event.tab) {
                     CreatorTab.Uploaded -> viewModel.refreshUploaded()

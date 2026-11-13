@@ -14,18 +14,20 @@ import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.entity.HanimeAdvancedSearchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.SearchHistoryEntity
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
-import com.yenaly.han1meviewer.logic.model.HanimeSearchResult
 import com.yenaly.han1meviewer.logic.model.SearchOption
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
+import com.yenaly.han1meviewer.util.isTitleBlocked
 import com.yenaly.han1meviewer.util.loadAssetAs
-import com.yenaly.han1meviewer.base.BaseViewModel
-import com.yenaly.han1meviewer.util.unsafeLazy
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.base.YenalyViewModel
+import com.yenaly.yenaly_libs.utils.unsafeLazy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,17 +40,9 @@ import kotlinx.coroutines.withContext
 class SearchViewModel(
     application: Application,
     private val state: SavedStateHandle
-) : BaseViewModel(application) {
+) : YenalyViewModel(application) {
 
-    private val _pageFlow = MutableStateFlow(1)
-    val pageFlow = _pageFlow.asStateFlow()
-
-    var page: Int
-        get() = _pageFlow.value
-        set(value) {
-            _pageFlow.value = value
-        }
-
+    var page: Int = 1
     var query: String?
         get() = state["query"]
         set(value) { state["query"] = value }
@@ -120,20 +114,16 @@ class SearchViewModel(
     }
 
     private val _searchStateFlow =
-        MutableStateFlow<PageLoadingState<HanimeSearchResult>>(PageLoadingState.Loading)
+        MutableStateFlow<PageLoadingState<List<HanimeInfo>>>(PageLoadingState.Loading)
     val searchStateFlow = _searchStateFlow.asStateFlow()
 
     private val _searchFlow = MutableStateFlow(emptyList<HanimeInfo>())
     val searchFlow = _searchFlow.asStateFlow()
-
-    private val _totalPagesFlow = MutableStateFlow(1)
-    val totalPagesFlow = _totalPagesFlow.asStateFlow()
     var recyclerViewState: Parcelable? = null
 
     fun clearHanimeSearchResult() {
         _searchFlow.value = emptyList()
         _searchStateFlow.value = PageLoadingState.Loading
-        _totalPagesFlow.value = 1
     }
 
     fun resetSearchUiState() {
@@ -153,7 +143,6 @@ class SearchViewModel(
         gridFirstVisibleItemScrollOffset = 0
         _searchFlow.value = emptyList()
         _searchStateFlow.value = PageLoadingState.Loading
-        _totalPagesFlow.value = 1
     }
 
     fun getHanimeSearchResult(
@@ -167,27 +156,17 @@ class SearchViewModel(
                 sort, broad, date ,
                 duration, tags, brands
             ).collect { state ->
-                _searchStateFlow.value = state
-                if (state is PageLoadingState.Success) {
-                    _totalPagesFlow.value = state.info.totalPages
-                    val list = state.info.list
-                    val updatedList = if (Preferences.showPlayedIndicator) {
-                        val codes = list.map { it.videoCode }
-                        val watchedCodes = withContext(Dispatchers.IO) {
-                            DatabaseRepo.WatchHistory.getWatched(codes).toSet()
+                val prev = _searchStateFlow.getAndUpdate { state }
+                if (prev is PageLoadingState.Loading) _searchFlow.value = emptyList()
+                _searchFlow.update { prevList ->
+                    when (state) {
+//                        is PageLoadingState.Success -> prevList + state.info
+                        is PageLoadingState.Success -> {
+                            val list = state.info.filterNot { isTitleBlocked(it.title) }
+                            (prevList + markWatchedList(list)).distinctBy(HanimeInfo::videoCode)
                         }
-                        list.map { item ->
-                            item.copy(watched = watchedCodes.contains(item.videoCode))
-                        }
-                    } else {
-                        list
-                    }
-                    if (Preferences.searchPagination) {
-                        _searchFlow.value = updatedList
-                    } else {
-                        _searchFlow.update { prevList ->
-                            (prevList + updatedList).distinctBy(HanimeInfo::videoCode)
-                        }
+                        is PageLoadingState.Loading -> emptyList()
+                        else -> prevList
                     }
                 }
             }

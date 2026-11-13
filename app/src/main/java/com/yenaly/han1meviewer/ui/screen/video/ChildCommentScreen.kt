@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +28,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -37,15 +40,18 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.ReportReason
 import com.yenaly.han1meviewer.logic.model.VideoCommentArgs
 import com.yenaly.han1meviewer.logic.model.VideoComments
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.component.BottomNavAwareSnackbarHost
 import com.yenaly.han1meviewer.ui.component.CommentReplyBar
 import com.yenaly.han1meviewer.ui.component.CommentReportDialog
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.VideoCommentCard
+import com.yenaly.han1meviewer.ui.component.bottomNavReservedSpacing
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
@@ -53,6 +59,7 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeCommentList
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
+import com.yenaly.han1meviewer.util.isCommentBlocked
 import com.yenaly.han1meviewer.util.parseTimeStrToMinutes
 import com.yenaly.han1meviewer.util.safeSortedBy
 import kotlinx.coroutines.flow.Flow
@@ -77,6 +84,7 @@ fun ChildCommentScreen(
     onThumbUp: (VideoComments.VideoComment) -> Unit,
     onThumbDown: (VideoComments.VideoComment) -> Unit,
     onCommentLikeSuccess: (VideoCommentArgs) -> Unit,
+    keyboardBottomInsetPx: Int = 0,
     onReplyStateChange: (Boolean) -> Unit = {},
 ) {
     val comments by commentsFlow.collectAsStateWithLifecycle()
@@ -86,10 +94,20 @@ fun ChildCommentScreen(
 
     var replyingComment by remember { mutableStateOf<VideoComments.VideoComment?>(null) }
     var replyText by remember { mutableStateOf(TextFieldValue("")) }
+    // 回复栏是否展开。和 replyingComment 分开存：关掉回复栏时保留 replyingComment + replyText 作为草稿。
+    var showReplyBar by rememberSaveable { mutableStateOf(false) }
     var reportComment by remember { mutableStateOf<VideoComments.VideoComment?>(null) }
     var selectedReasonIndex by remember { mutableIntStateOf(-1) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val imeBottomInsetPx = WindowInsets.ime.getBottom(density)
+    val sharedImeBottomInsetPx = ImeInsetState.keyboardBottomInsetPx.intValue
+    val effectiveKeyboardBottomInsetPx = if (sharedImeBottomInsetPx > 0) {
+        sharedImeBottomInsetPx
+    } else {
+        imeBottomInsetPx
+    }
 
     val loginFirstText = stringResource(R.string.login_first)
     val sendFailedText = stringResource(R.string.send_failed)
@@ -132,30 +150,47 @@ fun ChildCommentScreen(
         }
     }
 
-    val sortedComments = remember(comments) {
-        comments.safeSortedBy({ parseTimeStrToMinutes(it.date) }, descending = false)
+    val commentBlockingEnabled = Preferences.commentKeywordsEnabled
+    val blockedCommentKeywords = Preferences.blockedCommentKeywords
+    val sortedComments = remember(
+        comments,
+        commentBlockingEnabled,
+        blockedCommentKeywords,
+    ) {
+        // 评论关键词屏蔽：内容命中关键词的子评论直接隐藏
+        comments.filterNot { isCommentBlocked(it.content) }
+            .safeSortedBy({ parseTimeStrToMinutes(it.date) }, descending = false)
     }
     val nestedScrollInterop = rememberNestedScrollInteropConnection()
 
-    BackHandler(enabled = replyingComment != null) {
-        replyingComment = null
-        replyText = TextFieldValue("")
+    BackHandler(enabled = showReplyBar) {
+        // 只关闭输入栏，保留回复草稿；再次点同一条评论的「回复」可以接着写
+        showReplyBar = false
     }
 
-    LaunchedEffect(replyingComment) {
-        if (replyingComment != null) {
+    LaunchedEffect(showReplyBar) {
+        if (showReplyBar) {
             onReplyStateChange(true)
         }
     }
 
     Scaffold(
         modifier = Modifier.widthIn(max = maxScreenWidth),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { BottomNavAwareSnackbarHost(snackbarHostState) },
         bottomBar = {
             AnimatedVisibility(
-                visible = replyingComment != null,
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut(),
+                visible = replyingComment != null && showReplyBar,
+                modifier = Modifier.padding(
+                    bottom = if (effectiveKeyboardBottomInsetPx > 0) {
+                        with(LocalDensity.current) {
+                            effectiveKeyboardBottomInsetPx.toDp()
+                        }
+                    } else {
+                        bottomNavReservedSpacing()
+                    },
+                ),
+                enter = fadeIn(),
+                exit = fadeOut(),
             ) {
                 CommentReplyBar(
                     text = replyText,
@@ -171,6 +206,7 @@ fun ChildCommentScreen(
                                 onReply(target, replyText.text)
                                 replyingComment = null
                                 replyText = TextFieldValue("")
+                                showReplyBar = false
                             }
                         }
                     },
@@ -234,6 +270,9 @@ fun ChildCommentScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .nestedScroll(nestedScrollInterop),
+                    // 评论列表禁用入场动画：
+                    // item 滚出可视区回收后再滚回会重播动画，造成滚动抽搐
+                    enableItemAnimation = false,
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -244,8 +283,12 @@ fun ChildCommentScreen(
                                 if (!isAlreadyLogin) {
                                     scope.launch { snackbarHostState.showSnackbar(loginFirstText) }
                                 } else {
+                                    // 换了回复目标才重置 "@用户名 " 前缀；同一目标重开时保留草稿
+                                    if (replyingComment?.stableKey != comment.stableKey) {
+                                        replyText = TextFieldValue("@${comment.username} ")
+                                    }
                                     replyingComment = comment
-                                    replyText = TextFieldValue("@${comment.username} ")
+                                    showReplyBar = true
                                 }
                             },
                             onThumbUp = {

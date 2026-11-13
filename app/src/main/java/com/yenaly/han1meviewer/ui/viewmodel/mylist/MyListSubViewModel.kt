@@ -8,15 +8,15 @@ import com.yenaly.han1meviewer.logic.model.MyListItems
 import com.yenaly.han1meviewer.logic.model.MyListType
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.base.BaseViewModel
-import kotlinx.coroutines.flow.Flow
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.base.YenalyViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-abstract class MyListSubViewModel(application: Application) : BaseViewModel(application) {
+abstract class MyListSubViewModel(application: Application) : YenalyViewModel(application) {
 
     protected val itemsStateFlow: MutableStateFlow<PageLoadingState<MyListItems<HanimeInfo>>> =
         MutableStateFlow(PageLoadingState.Loading)
@@ -25,9 +25,6 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
 
     protected val mutableLoadedPageCount = MutableStateFlow(0)
     val loadedPageCount = mutableLoadedPageCount.asStateFlow()
-
-    protected val mutableTotalPages = MutableStateFlow(1)
-    val totalPages = mutableTotalPages.asStateFlow()
 
     protected val mutableIsLoadingMore = MutableStateFlow(false)
     val isLoadingMore = mutableIsLoadingMore.asStateFlow()
@@ -48,7 +45,6 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
                     when (state) {
                         is PageLoadingState.Success -> {
                             onSuccess(state.info)
-                            mutableTotalPages.value = state.info.maxPage
                             if (state.info.hanimeInfo.isEmpty()) {
                                 itemsStateFlow.update { PageLoadingState.NoMoreData }
                             } else {
@@ -57,7 +53,7 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
                             val baseList = if (isRefreshing) emptyList() else prevList
                             isRefreshing = false
                             mutableIsLoadingMore.value = false
-                            (baseList + state.info.hanimeInfo).distinctBy(HanimeInfo::videoCode)
+                            (baseList + markWatchedList(state.info.hanimeInfo)).distinctBy(HanimeInfo::videoCode)
                         }
 
                         is PageLoadingState.Loading -> prevList
@@ -72,9 +68,9 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
     }
 
     protected fun <T, R> deleteItem(
-        deleteCall: suspend () -> Flow<WebsiteState<T>>,
+        deleteCall: suspend () -> kotlinx.coroutines.flow.Flow<WebsiteState<T>>,
         emitTo: MutableSharedFlow<WebsiteState<R>>,
-        identifier: String,
+        position: Int,
         mapState: (WebsiteState<T>) -> WebsiteState<R>,
         isSuccess: (WebsiteState<T>) -> Boolean = { it is WebsiteState.Success },
     ) {
@@ -83,7 +79,7 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
                 emitTo.emit(mapState(deleteState))
                 itemsFlow.update { list ->
                     if (isSuccess(deleteState)) {
-                        list.filter { it.videoCode != identifier }
+                        list.toMutableList().apply { removeAt(position) }
                     } else list
                 }
             }
@@ -94,7 +90,6 @@ abstract class MyListSubViewModel(application: Application) : BaseViewModel(appl
         isRefreshing = true
         mutableIsLoadingMore.value = false
         mutableLoadedPageCount.value = 0
-        mutableTotalPages.value = 1
         itemsFlow.value = emptyList()
         itemsStateFlow.value = PageLoadingState.Loading
     }

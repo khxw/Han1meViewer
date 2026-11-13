@@ -19,15 +19,15 @@ Han1meViewer 当前是以 Kotlin + Jetpack Compose 为主的 Android 应用，�
 - WorkManager 后台下载和更新任务。
 - Coil 3 Compose 图片加载。
 - Media3 ExoPlayer、JZVD、MPV Android 播放链路。
-- Firebase Analytics、Crashlytics、Performance、Remote Config、Realtime Database。
 
-当前代码仍有少量历史 View/XML 组件，例如 JZVD 自定义 View 和播放器相关布局，但主业务页面已经以 Compose 为主。
+当前代码仍有少量历史 View/XML 组件，例如 JZVD 自定义 View、部分设置/播放器相关布局和 `yenaly_libs` 基础库组件，但主业务页面已经以 Compose 为主。
 
 ## 2. 模块结构
 
 Gradle 模块：
 
 - `:app`：主应用模块，包含 UI、业务状态、网络解析、本地数据库、播放器、下载、更新和资源。
+- `:yenaly_libs`：项目内公共库，提供基础 Activity、Fragment、ViewModel、Preference、工具类和部分 View 封装。
 - `buildSrc`：构建辅助逻辑，维护版本号、构建来源、提交 SHA 等 Gradle 侧配置。
 
 主应用关键目录：
@@ -371,7 +371,6 @@ Room 主要用于：
 - `HanimeNotFoundException`
 - `LoginStateExpiredException`
 - `ParseException`
-- `HUpdaterException`
 
 开发约定：
 
@@ -379,36 +378,6 @@ Room 主要用于：
 - `NetworkRepo` 应保留 `CancellationException` 语义，不吞掉协程取消。
 - 登录态过期、Cloudflare、IP blocked 等应映射成可被 UI 理解的异常或状态。
 - 解析列表时优先保证 `videoCode`、`listCode` 等业务键非空和稳定。
-
-### 更新链路（GitHub）
-
-更新完全依赖 GitHub，因此必须把「限额耗尽 / 密钥失效 / 权限不足 / Artifact 过期 / 网络异常」
-区分开，而不是一律报「更新失败」。
-
-相关文件：
-
-- `logic/network/HUpdater.kt`：版本检查与安装包下载。
-- `logic/network/GitHubErrorMapper.kt`：HTTP 响应 → `HUpdaterException` 的分类映射。
-- `logic/exception/HUpdaterException.kt`：分类异常 + 对应的可展示文案。
-- `worker/HUpdateWorker.kt`：下载通知与失败提示。
-- `util/Versions.kt`：版本比较与安装包落盘位置。
-
-约定：
-
-- `HGitHubService` 的版本信息接口必须返回 `Response<T>`。返回实体类型时非 2xx 会直接抛
-  `HttpException`，拿不到响应体与状态码，就永远无法区分 403 的两种含义
-  （限额耗尽 vs 权限不足）。
-- 渠道由 `Preferences.useCIUpdateChannel` 唯一决定，**任何情况下都不做回落**：
-  CI 构建始终领先 Release，一旦因 CI 出错就回落，会把用户降级到更旧的版本。
-  CI 频道出错就如实报错，由用户自己在设置页手动重试。`enable_ci_update`（Remote Config，
-  默认开启）只是作者临时下线 CI 频道的开关，关闭时同样只报错、不回落。
-- 更新链路**不做自动重试**：失败原因如实回报给用户，由用户在设置页手动重试。
-  不要在这里重新引入退避重试，限额耗尽时重试只会让情况更糟。
-- `checkForUpdate()` 失败时抛 `HUpdaterException.VersionCheck`，`injectUpdate()` 失败时抛
-  `HUpdaterException.Download`；UI 侧用 `HUpdater.errorMessage(e)` 取可展示文案，
-  详细诊断（状态码 + 响应体片段）用 `HUpdater.errorDetail(e)` 写日志。
-- 下载必须先校验 `Response.isSuccessful` 再落盘，否则错误 JSON 会被写成假的 `update.apk`。
-- `BuildConfig.HA_GITHUB_TOKEN` 为空时不再发送非法的 `Bearer `，改为匿名请求（限额更低但可用）。
 
 ## 12. 账号、Cookie 和 Cloudflare
 
@@ -428,41 +397,26 @@ Room 主要用于：
 - Cloudflare 页面和拦截器用于处理访问保护导致的请求失败。
 - 账号信息修改、密码修改、头像上传都通过 `HanimeMyListService` 和 `NetworkRepo` 包装。
 
-## 13. 公告系统与管理端
+## 13. 公告系统
 
-公告系统分为应用侧展示和管理端写入两部分。
+公告源自托管在仓库根目录的 `announcements.json`，维护者提交/修改该文件即可发布或下架公告，无需外部服务权限。
 
 关键文件：
 
-- `ui/viewmodel/MainViewModel.kt`
-- `ui/component/AnnouncementDialog.kt`
-- `ui/screen/home/HomePageScreen.kt`
 - `logic/model/Announcement.kt`
-- `HanimeAnnouncementManagerWebUI/HanimeAnnouncementManager.html`
-- `HanimeAnnouncementManagerWebUI/PermitAdmin.py`
+- `logic/model/AnnouncementDto.kt`
+- `logic/network/service/HGitHubService.kt`
+- `ui/screen/home/homepage/component/AnnouncementCard.kt`
+- `ui/screen/home/homepage/component/AnnouncementDialog.kt`
+- `ui/screen/home/homepage/component/AnnouncementListDialog.kt`
 
 应用侧链路：
 
-- `MainViewModel.loadAnnouncements()` 从 Firebase Realtime Database 的 `announcements` 节点读取公告。
+- 通过 GitHub Contents API（`Accept: application/vnd.github.raw`）读取仓库根目录 `announcements.json` 原文，走 `api.github.com` 通道在受限网络下更稳；另有 raw CDN（`HA1_ANNOUNCEMENTS_URL`）作为备用源。
 - 只有 `isActive = true` 的公告会参与展示。
-- 首页通过公告卡片展示公告列表。
+- 首页通过公告卡片展示公告列表，可展开查看全部。
 - 点击公告后进入 `AnnouncementDialog`，可查看标题、正文、时间、图片和按钮文案。
 - 用户关闭公告后，会记录 `last_dismiss_time`，24 小时内不会再次自动弹出。
-
-管理端链路：
-
-- `HanimeAnnouncementManager.html` 是基于 Firebase Web SDK 的管理页面。
-- 页面通过 `firebaseConfig` 连接到项目对应的 Realtime Database。
-- 页面使用 `ADMIN_EMAIL` 和 `ADMIN_PASSWORD` 登录 Firebase Auth。
-- 登录成功后读取 `announcements` 节点并渲染为表格。
-- 页面支持新增、编辑、启用、停用和删除公告。
-
-管理员权限：
-
-- `PermitAdmin.py` 使用 Firebase Admin SDK 给指定 UID 写入 `isAdmin: true` 自定义声明。
-- 该脚本依赖本地 `serviceAccountKey.json`。
-- 运行前需要安装 `firebase-admin`，并填写目标用户 UID。
-- 该自定义声明用于管理端权限校验。
 
 公告字段约定：
 
@@ -477,10 +431,9 @@ Room 主要用于：
 
 实现约定：
 
-- 公告数据应兼容部分字段缺失的情况。
-- 管理端更新公告时会刷新 `timestamp`，便于前端显示最新时间。
-- 停用公告时只更新 `isActive`，删除则直接移除节点。
-- 后续如果新增公告字段，需要同步更新 `Announcement` 模型、管理端表单和展示弹窗。
+- 公告数据应兼容部分字段缺失的情况（`AnnouncementDto` 各字段均有默认值）。
+- 停用公告时只更新 `isActive` 字段。
+- 后续如果新增公告字段，需要同步更新 `AnnouncementDto`/`Announcement` 模型和展示组件。
 
 ## 14. 设置体系
 

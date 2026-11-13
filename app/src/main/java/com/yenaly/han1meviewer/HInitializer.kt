@@ -1,8 +1,12 @@
 package com.yenaly.han1meviewer
 
-import com.yenaly.han1meviewer.base.BaseInitializer
+import android.content.Context
+import com.yenaly.yenaly_libs.base.YenalyInitializer
 
-/**
- * 应用启动初始化器，负责保存全局 Application Context。
- */
-class HInitializer : BaseInitializer()
+class HInitializer : YenalyInitializer() {
+    override fun create(context: Context) {
+        super.create(context)
+        // 设置默认未捕获异常处理器，用于本地崩溃日志记录
+        Thread.setDefaultUncaughtExceptionHandler(HCrashHandler)
+    }
+}

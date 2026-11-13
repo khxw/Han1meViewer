@@ -12,13 +12,21 @@ plugins {
     alias(libs.plugins.org.jetbrains.kotlin.plugin.parcelize)
     alias(libs.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.com.google.devtools.ksp)
-    alias(libs.plugins.com.google.gms.google.services)
-    alias(libs.plugins.com.google.firebase.crashlytics)
-    alias(libs.plugins.com.google.firebase.firebase.pref)
     alias(libs.plugins.compose.compiler)
-    id("com.mikepenz.aboutlibraries.plugin") version "14.2.1"
-    id("com.github.ben-manes.versions") version "0.54.0"
+    alias(libs.plugins.navigation.safeargs)
+    id("com.mikepenz.aboutlibraries.plugin") version "15.2.0"
+    id("io.github.ben-manes.versions") version "0.65.0"
 }
+
+/**
+ * 本地快速构建开关（只影响本地开发，正式发布/CI 不传即可保持原行为）：
+ *
+ * - 日常迭代：:app:assembleRelease -PfastBuild=true
+ *   只产出 arm64-v8a 单个 APK，并跳过 lintVital，显著缩短打包时间。
+ * - 正式发布：:app:assembleRelease（不带该参数）
+ *   照旧产出 4 个 ABI 包 + 1 个 universal 包，并执行完整 lintVital 校验。
+ */
+val fastBuild = (findProperty("fastBuild") as? String)?.toBoolean() ?: false
 
 android {
     compileSdk = property("compile.sdk")?.toString()?.toIntOrNull()
@@ -33,10 +41,10 @@ android {
 
 
     defaultConfig {
-        applicationId = "com.yenaly.han1meviewer"
+        applicationId = "com.han1meviewer.remastered"
         minSdk = property("min.sdk")?.toString()?.toIntOrNull()
         targetSdk = property("target.sdk")?.toString()?.toIntOrNull()
-        val (code, name) = createVersion(major = 1, minor = 3, patch = 0)
+        val (code, name) = createVersion(major = 2, minor = 1, patch = 150, versionCodePatch = 255)
         versionCode = code
         versionName = name
 
@@ -59,12 +67,25 @@ android {
         }
     }
 
+    // 应用内提供语言切换（会动态修改 locale），因此 AAB 不能按语言拆分，
+    // 否则切换语言后对应语言的资源不存在。
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     splits {
         abi {
-            isEnable = (gradle.startParameter.taskRequests.toString().contains("Release"))
+            isEnable = (gradle.startParameter.taskRequests.toString().contains("Release")) || fastBuild
             reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            if (fastBuild) {
+                // 本地快速构建：只打 arm64-v8a，且不再额外产出 universal 包
+                include("arm64-v8a")
+            } else {
+                include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            }
+            isUniversalApk = !fastBuild
         }
     }
 
@@ -91,14 +112,11 @@ android {
         }
     }
     buildFeatures {
+        //noinspection DataBindingWithoutKapt
+        dataBinding = true
         buildConfig = true
+        viewBinding = true
         compose  =  true
-    }
-    bundle {
-        language {
-            // 应用内切换语言需要打包全部语言资源
-            enableSplit = false
-        }
     }
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
@@ -106,7 +124,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     lint {
-        disable += setOf("EnsureInitializerMetadata")
+        // OverdrawDetector crashes/hangs with the current Kotlin FIR lint bridge.
+        disable += setOf("EnsureInitializerMetadata", "Overdraw", "PropertyEscape")
     }
     namespace = "com.yenaly.han1meviewer"
 }
@@ -125,10 +144,12 @@ kotlin {
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-
+            val impl = output as VariantOutputImpl
+            val abiFilter = impl.filters.find { it.filterType.name == "ABI" }?.identifier
+            val suffix = if (abiFilter != null) "-$abiFilter" else "-universal"
             //  val apkName = "你的应用名_V${output.versionName.get()}_Build${output.versionCode.get()}_${variant.buildType}.apk"
-            val apkName = "Han1meViewer-v${output.versionName.get()}.apk"
-            (output as VariantOutputImpl).outputFileName = apkName
+            val apkName = "Han1meViewer-v${output.versionName.get()}$suffix.apk"
+            impl.outputFileName = apkName
         }
     }
 }
@@ -137,9 +158,13 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.androidx.window)
     implementation(libs.androidx.window.java)
+    implementation(project(":yenaly_libs"))
+    // 本地 jar/aar 依赖
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar", "*.jar"))))
     implementation(libs.aboutlibraries.core)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.core.splashscreen)
+    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.material.icons.extended)
     // android related
 
@@ -151,19 +176,17 @@ dependencies {
     implementation(platform(libs.compose.compose.bom))
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material3.adaptive.navigation.suite)
-    implementation(libs.compose.material3.adaptive)
-    implementation(libs.compose.material3.adaptive.layout)
-    implementation(libs.compose.material3.adaptive.navigation)
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.ui.ui.tooling.preview)
     implementation(libs.androidx.ui)
+    androidTestImplementation(platform(libs.compose.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.compose.ui.ui.tooling)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.video)
     implementation(libs.aboutlibraries.compose.m3)
     implementation(libs.compose.avatar.cropper)
     // datetime
@@ -196,18 +219,15 @@ dependencies {
 
     // view
 
+    implementation(libs.multitype)
     implementation(libs.base.recyclerview.adapter.helper4)
+    implementation(libs.expandable.textview)
     implementation(libs.spannable.x)
+    implementation(libs.about)
+    implementation(libs.circular.reveal.switch)
+    implementation(libs.drawerlayout)
 
-    // firebase
-
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.perf)
-    implementation(libs.firebase.config)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.firebase.database)
     ksp(libs.room.compiler)
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
@@ -217,8 +237,12 @@ dependencies {
     androidTestImplementation(libs.test.junit)
     androidTestImplementation(libs.test.espresso.core)
 
-    implementation(libs.crashx)
     // debugImplementation(libs.leak.canary)
+}
+
+if (fastBuild) {
+    // 本地快速构建不跑 lintVital，避免每次迭代都做完整静态检查
+    tasks.matching { it.name.startsWith("lintVital") }.configureEach { enabled = false }
 }
 
 /**

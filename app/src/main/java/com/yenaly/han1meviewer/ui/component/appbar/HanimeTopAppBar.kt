@@ -7,14 +7,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarDefaults.topAppBarColors
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,15 +29,13 @@ fun HanimeTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     TopAppBar(
-        modifier = modifier,
-        colors = if (scrollBehavior != null) {
-            topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                titleContentColor = MaterialTheme.colorScheme.onSurface,
-            )
-        } else {
-            TopAppBarDefaults.topAppBarColors()
-        },
+        modifier = modifier.shadow(elevation = 1.dp),
+        colors = topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ),
         title = {
             if (subtitle != null) {
                 Column {

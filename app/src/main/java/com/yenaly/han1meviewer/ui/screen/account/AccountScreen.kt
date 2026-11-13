@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -67,7 +69,6 @@ import com.yenaly.han1meviewer.logic.model.UserAccount
 import com.yenaly.han1meviewer.logic.model.UserAccountAction
 import com.yenaly.han1meviewer.logic.model.UserAccountSubmittingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -75,7 +76,8 @@ import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.screen.rememberRandomLoadingHint
 import com.yenaly.han1meviewer.ui.viewmodel.UserAccountViewModel
 import com.yenaly.han1meviewer.util.pickVisualMedia
-import com.yenaly.han1meviewer.util.browse
+import com.yenaly.yenaly_libs.utils.browse
+import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -109,7 +111,7 @@ fun AccountScreen(
         viewModel.actionFlow.collect { event ->
             when (event.state) {
                 is WebsiteState.Error -> {
-                    GlobalToasts.show(event.state.throwable.message ?: modifyFailed, level = GlobalToasts.ToastLevel.ERROR)
+                    showShortToast(event.state.throwable.message ?: modifyFailed)
                 }
 
                 is WebsiteState.Success -> {
@@ -123,7 +125,7 @@ fun AccountScreen(
                         UserAccountAction.PasswordUpdated -> modifySuccess
                         UserAccountAction.AvatarUpdated -> modifySuccess
                     }
-                    GlobalToasts.show(message, level = GlobalToasts.ToastLevel.SUCCESS)
+                    showShortToast(message)
                 }
 
                 WebsiteState.Loading -> Unit
@@ -181,7 +183,7 @@ private fun AccountContent(
     account: UserAccount,
     submittingState: UserAccountSubmittingState,
     contentPadding: PaddingValues,
-    onUpdateProfile: (String) -> Unit,
+    onUpdateProfile: (String, String) -> Unit,
     onUpdatePassword: (String, String, String) -> Unit,
     onPickAvatar: suspend () -> Unit,
     onLogout: () -> Unit,
@@ -205,7 +207,6 @@ private fun AccountContent(
     val isUpdatingPassword = submittingState == UserAccountSubmittingState.UpdatingPassword
     val isUpdatingAvatar = submittingState == UserAccountSubmittingState.UpdatingAvatar
     val isSubmitting = submittingState != UserAccountSubmittingState.Idle
-    val passwordNotMatch = stringResource(R.string.password_not_match)
 
     Column(
         modifier = Modifier
@@ -329,7 +330,6 @@ private fun AccountContent(
                     shape = MaterialTheme.shapes.medium
                 )
 
-                // 2026-11 網站改版後 email 為唯讀欄位，編輯狀態與網站同步
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -337,12 +337,11 @@ private fun AccountContent(
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = MaterialTheme.shapes.medium,
-                    enabled = account.emailEditable,
+                    shape = MaterialTheme.shapes.medium
                 )
 
                 Button(
-                    onClick = { onUpdateProfile(name.trim()) },
+                    onClick = { onUpdateProfile(name.trim(), email.trim()) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSubmitting && name.isNotBlank() && email.isNotBlank(),
                 ) {
@@ -446,7 +445,7 @@ private fun AccountContent(
                 Button(
                     onClick = {
                         if (newPassword != newPasswordConfirm) {
-                            GlobalToasts.show(passwordNotMatch, level = GlobalToasts.ToastLevel.WARNING)
+                            showShortToast(R.string.password_not_match)
                         } else {
                             onUpdatePassword(oldPassword, newPassword, newPasswordConfirm)
                             oldPassword = ""
@@ -501,10 +500,9 @@ private fun AccountScreenPreview() {
                 joinedLabel = "加入於 1年前",
                 subscriberCount = 0,
                 videoCount = 9,
-                emailEditable = false,
             ),
             contentPadding = PaddingValues(),
-            onUpdateProfile = { },
+            onUpdateProfile = { _, _ -> },
             onUpdatePassword = { _, _, _ -> },
             onPickAvatar = {},
             onLogout = {},

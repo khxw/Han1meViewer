@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.logic.network
 
-import android.util.Log
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.yenaly.han1meviewer.BuildConfig
 import com.yenaly.han1meviewer.HA1_GITHUB_API_URL
@@ -8,11 +7,12 @@ import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.network.interceptor.CloudflareInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.GetchuInterceptor
+import com.yenaly.han1meviewer.logic.network.interceptor.RetryOnErrorInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.SpeedLimitInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.UrlLoggingInterceptor
 import com.yenaly.han1meviewer.logic.network.interceptor.UserAgentInterceptor
-import com.yenaly.han1meviewer.util.applicationContext
-import com.yenaly.han1meviewer.util.unsafeLazy
+import com.yenaly.yenaly_libs.utils.applicationContext
+import com.yenaly.yenaly_libs.utils.unsafeLazy
 import okhttp3.Cache
 import okhttp3.CookieJar
 import okhttp3.MediaType.Companion.toMediaType
@@ -82,9 +82,15 @@ object ServiceCreator {
         getchuClient = buildGetchuClient()
     }
 
+    fun updateDownloadSpeedLimit() {
+        downloadSpeedLimitInterceptor.maxSpeed = Preferences.downloadSpeedLimit
+    }
+
     private fun buildGetchuClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
+            // 弱网下大响应读取时间放宽，避免 10s 默认值误判超时
+            .readTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(UrlLoggingInterceptor())
             .addInterceptor(GetchuInterceptor())
             .cookieJar(CookieJar.NO_COOKIES)
@@ -96,9 +102,12 @@ object ServiceCreator {
     private fun buildDownloadClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(5, TimeUnit.SECONDS)
+            // 弱网下载可能出现较长停顿，读取时间放宽
+            .readTimeout(30, TimeUnit.SECONDS)
             .protocols(listOf(Protocol.HTTP_1_1))
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(downloadSpeedLimitInterceptor)
+            .proxySelector(HProxySelector())
             .dns(dns)
             .build()
     }
@@ -109,6 +118,9 @@ object ServiceCreator {
     private fun buildHClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
+            // 弱网下大响应（首页/评论列表等）读取时间放宽，避免 10s 默认值误判超时
+            .readTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(RetryOnErrorInterceptor())
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(UrlLoggingInterceptor())
             .addInterceptor(CloudflareInterceptor(applicationContext))
@@ -120,24 +132,24 @@ object ServiceCreator {
     }
 
     private fun buildGithubClient(): OkHttpClient {
-        // 令牌可能为空（CI/本地构建时没有配置 HA_GITHUB_TOKEN）。以前这里无条件带上
-        // "Bearer "，会得到一个必然 401 的非法凭证，反而掩盖了真正的原因；
-        // 空令牌时干脆走匿名请求（限额更低，但至少不会自己把自己弄挂）。
-        val token = BuildConfig.HA_GITHUB_TOKEN.trim()
-        if (token.isEmpty()) {
-            Log.w("ServiceCreator", "HA_GITHUB_TOKEN 为空，GitHub 请求将以匿名方式进行（限额更低）")
-        }
         return OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .dns(GitHubDns)
             .addInterceptor(UserAgentInterceptor)
             .addInterceptor(UrlLoggingInterceptor())
             .addInterceptor { chain ->
-                val builder = chain.request().newBuilder()
-                if (token.isNotEmpty()) {
-                    builder.addHeader("Authorization", "Bearer $token")
+                // 仅在有有效 token 时附带 Authorization 头。
+                // 若 token 为空（本地/无 token 构建），发送空的 "Bearer " 会被 GitHub 拒为 401，
+                // 导致检查更新失败；此时应改用匿名请求（受 60 次/小时限流，足够偶尔检查更新）。
+                val token = BuildConfig.HA_GITHUB_TOKEN
+                val request = if (token.isNotBlank()) {
+                    chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+                } else {
+                    chain.request()
                 }
-                return@addInterceptor chain.proceed(builder.build())
+                return@addInterceptor chain.proceed(request)
             }
             .build()
     }

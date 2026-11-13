@@ -28,9 +28,6 @@ class MySubscriptionsViewModel : ViewModel() {
     private val cachedVideos = mutableListOf<SubscriptionVideosItem>()
     private val cachedArtists = mutableListOf<SubscriptionItem>()
 
-    private val _loadedPage = MutableStateFlow(1)
-    val loadedPage = _loadedPage.asStateFlow()
-
     private val _refreshCompleted = MutableSharedFlow<Unit>()
     val refreshCompleted: SharedFlow<Unit> = _refreshCompleted
 
@@ -71,7 +68,6 @@ class MySubscriptionsViewModel : ViewModel() {
                             cachedArtists.addAll(info.subscriptions)
                         }
                         if (info.subscriptionsVideos.isNotEmpty()) {
-                            _loadedPage.value = currentPage
                             cachedVideos.addAll(info.subscriptionsVideos)
                             currentPage++
                             Log.i("getMySubscriptions","currentPage:$currentPage")
@@ -94,15 +90,4 @@ class MySubscriptionsViewModel : ViewModel() {
     }
 
     fun canLoadMore() = hasMore && !isLoadingMore
-
-    fun goToPage(page: Int) {
-        if (isLoadingMore) return
-        currentPage = page
-        hasMore = true
-        cachedVideos.clear()
-        cachedArtists.clear()
-        isLoadingMore = false
-        _subscriptionsState.value = WebsiteState.Loading
-        loadMySubscriptions(forceReload = false)
-    }
 }

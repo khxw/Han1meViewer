@@ -3,6 +3,9 @@ package com.yenaly.han1meviewer.ui.screen.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,26 +15,33 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.HorizontalCardCountConfig
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SearchGridColumnsConfig
 import com.yenaly.han1meviewer.ui.component.ChoiceDialog
+import com.yenaly.han1meviewer.ui.component.SettingInfoItem
 import com.yenaly.han1meviewer.ui.component.SettingNavigationItem
 import com.yenaly.han1meviewer.ui.component.SettingSliderItem
 import com.yenaly.han1meviewer.ui.component.SettingSwitchItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyColumn
-import com.yenaly.han1meviewer.ui.navigation.settings.SettingsCategory
+import com.yenaly.han1meviewer.ui.preview.ComponentPreview
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.BlockedTagsDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.HomeCategoryLayoutDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.HorizontalCardCountDialog
 import com.yenaly.han1meviewer.ui.screen.settings.dialog.SearchGridColumnsDialog
-import com.yenaly.han1meviewer.ui.screen.settings.dialog.ThemeColorPresetDialog
+import com.yenaly.han1meviewer.ui.screen.settings.dialog.TagManagerDialog
 import com.yenaly.han1meviewer.ui.screen.settings.model.HomeSettingsUiState
 import com.yenaly.han1meviewer.ui.theme.ThemeColorPreset
+import com.yenaly.han1meviewer.util.TagLocalizer
 
 private enum class HomeSettingsChoiceDialog {
     VideoLanguage,
@@ -39,16 +49,11 @@ private enum class HomeSettingsChoiceDialog {
     DarkMode,
     AppLanguage,
     ThemeColor,
+    AnnouncementFetchInterval,
 }
 
-/**
- * 单个设置分类的详情内容。
- *
- * 手机和双栏模式的右侧面板共用该页面，仅根据 [category] 展示对应设置项。
- */
 @Composable
 fun HomeSettingsScreen(
-    category: SettingsCategory,
     state: HomeSettingsUiState,
     onVideoLanguageChange: (String) -> Unit,
     onVideoQualityChange: (String) -> Unit,
@@ -56,30 +61,40 @@ fun HomeSettingsScreen(
     onAllowPipModeChange: (Boolean) -> Unit,
     onAllowResumePlaybackChange: (Boolean) -> Unit,
     onShowPlayedIndicatorChange: (Boolean) -> Unit,
-    onWatchedProgressThresholdChange: (Int) -> Unit,
-    onSearchPaginationChange: (Boolean) -> Unit,
-    onRelatedVideoAsTabChange: (Boolean) -> Unit,
+    onClipboardLinkDetectChange: (Boolean) -> Unit,
+    onBlockTagsEnabledChange: (Boolean) -> Unit,
+    onBlockedTagsChange: (Set<String>) -> Unit,
+    onBlockKeywordsEnabledChange: (Boolean) -> Unit,
+    onBlockedKeywordsChange: (Set<String>) -> Unit,
+    onCommentKeywordsEnabledChange: (Boolean) -> Unit,
+    onBlockedCommentKeywordsChange: (Set<String>) -> Unit,
     onSearchArtistIgnoreVideoTypeChange: (Boolean) -> Unit,
     onDisableMobileDataWarningChange: (Boolean) -> Unit,
-    onDisablePredictiveBackChange: (Boolean) -> Unit,
-    onShowExitConfirmChange: (Boolean) -> Unit,
+    onTabletModeChange: (Boolean) -> Unit,
+    onUseBottomNavigationChange: (Boolean) -> Unit,
+    onUseCompactModeChange: (Boolean) -> Unit,
     onDisableCommentsChange: (Boolean) -> Unit,
+    onCollapseDownloadedGroupChange: (Boolean) -> Unit,
     onSearchGridColumnsConfigChange: (SearchGridColumnsConfig) -> Unit,
     onHorizontalCardCountConfigChange: (HorizontalCardCountConfig) -> Unit,
     onUseCIUpdateChannelChange: (Boolean) -> Unit,
-    onUseAnalyticsChange: (Boolean) -> Unit,
     onUseLockScreenChange: (Boolean) -> Unit,
     onThemeColorChange: (String) -> Unit,
-    onPureBlackDarkModeChange: (Boolean) -> Unit,
     onHomeCategoryPreferencesChange: (List<String>, Set<String>) -> Unit,
     onOpenPlayerSettings: () -> Unit,
+    onOpenInteractionSettings: () -> Unit,
+    onOpenHKeyframeSettings: () -> Unit,
+    onOpenDownloadSettings: () -> Unit,
+    onOpenStorageManager: () -> Unit,
+    onOpenNetworkSettings: () -> Unit,
     onOpenAppLanguageSettings: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     onUpdatePopupIntervalDaysChange: (Int) -> Unit,
+    onAnnouncementFetchIntervalHoursChange: (Int) -> Unit,
+    onOpenApplyDeepLinks: () -> Unit,
     onOpenFakeLauncherIcon: () -> Unit,
     onOpenOpenSourceLicense: () -> Unit,
-    onOpenAboutPage: () -> Unit,
-    onClearCache: () -> Unit,
+    onOpenAbout: () -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     onSubmitBug: () -> Unit,
@@ -89,6 +104,10 @@ fun HomeSettingsScreen(
     var showSearchGridColumnsDialog by rememberSaveable { mutableStateOf(false) }
     var showHorizontalCardCountDialog by rememberSaveable { mutableStateOf(false) }
     var showHomeCategoryDialog by rememberSaveable { mutableStateOf(false) }
+    var showBlockedTagsDialog by rememberSaveable { mutableStateOf(false) }
+    var showBlockedKeywordsDialog by rememberSaveable { mutableStateOf(false) }
+    var showBlockedCommentKeywordsDialog by rememberSaveable { mutableStateOf(false) }
+    val allTags = remember { TagLocalizer.allLocalizedTags() }
 
     ChoiceDialog(
         visible = activeDialog == HomeSettingsChoiceDialog.VideoLanguage,
@@ -124,6 +143,7 @@ fun HomeSettingsScreen(
             stringResource(R.string.follow_system) to "follow_system",
             stringResource(R.string.always_off) to "always_off",
             stringResource(R.string.always_on) to "always_on",
+            stringResource(R.string.always_amoled) to "always_amoled",
         ),
         selectedValue = state.darkMode,
         onDismiss = { activeDialog = null },
@@ -151,15 +171,35 @@ fun HomeSettingsScreen(
         },
     )
 
-    ThemeColorPresetDialog(
+    ChoiceDialog(
         visible = activeDialog == HomeSettingsChoiceDialog.ThemeColor,
-        presets = ThemeColorPreset.entries
-            .filter { state.dynamicColorEnabled || it != ThemeColorPreset.SYSTEM },
-        selectedKey = state.themeColorKey,
+        title = stringResource(R.string.theme_color),
+        options = ThemeColorPreset.entries
+            .filter { state.dynamicColorEnabled || it != ThemeColorPreset.SYSTEM }
+            .map { stringResource(it.displayNameRes) to it.key },
+        selectedValue = state.themeColorKey,
         onDismiss = { activeDialog = null },
         onSelect = {
             activeDialog = null
             onThemeColorChange(it)
+        },
+    )
+
+    ChoiceDialog(
+        visible = activeDialog == HomeSettingsChoiceDialog.AnnouncementFetchInterval,
+        title = stringResource(R.string.announcement_fetch_interval),
+        options = listOf(
+            stringResource(R.string.announcement_fetch_interval_hours_format, 3) to "3",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 6) to "6",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 12) to "12",
+            stringResource(R.string.announcement_fetch_interval_hours_format, 23) to "23",
+            stringResource(R.string.announcement_fetch_interval_off) to "0",
+        ),
+        selectedValue = state.announcementFetchIntervalHours.toString(),
+        onDismiss = { activeDialog = null },
+        onSelect = {
+            activeDialog = null
+            onAnnouncementFetchIntervalHoursChange(it.toInt())
         },
     )
 
@@ -196,344 +236,458 @@ fun HomeSettingsScreen(
         )
     }
 
+    if (showBlockedTagsDialog) {
+        TagManagerDialog(
+            initialTags = state.blockedTags,
+            allTags = allTags,
+            onDismiss = { showBlockedTagsDialog = false },
+            onConfirm = { tags ->
+                showBlockedTagsDialog = false
+                onBlockedTagsChange(tags)
+            },
+        )
+    }
+
+    if (showBlockedKeywordsDialog) {
+        BlockedTagsDialog(
+            initialTags = state.blockedKeywords,
+            onDismiss = { showBlockedKeywordsDialog = false },
+            onConfirm = { keywords ->
+                showBlockedKeywordsDialog = false
+                onBlockedKeywordsChange(keywords)
+            },
+            titleRes = R.string.blocked_keywords_dialog_title,
+            summaryRes = R.string.blocked_keywords_dialog_summary,
+            emptyRes = R.string.blocked_keywords_empty,
+            inputHintRes = R.string.blocked_keywords_input_hint,
+            duplicatedRes = R.string.blocked_keywords_duplicated,
+        )
+    }
+
+    if (showBlockedCommentKeywordsDialog) {
+        BlockedTagsDialog(
+            initialTags = state.blockedCommentKeywords,
+            onDismiss = { showBlockedCommentKeywordsDialog = false },
+            onConfirm = { keywords ->
+                showBlockedCommentKeywordsDialog = false
+                onBlockedCommentKeywordsChange(keywords)
+            },
+            titleRes = R.string.blocked_comment_keywords_dialog_title,
+            summaryRes = R.string.blocked_comment_keywords_dialog_summary,
+            emptyRes = R.string.blocked_comment_keywords_empty,
+            inputHintRes = R.string.blocked_comment_keywords_input_hint,
+            duplicatedRes = R.string.blocked_comment_keywords_duplicated,
+        )
+    }
+
+    // 底部导航栏模式下为悬浮导航栏预留空间，保证列表末尾可滚至导航栏上方
+    val bottomNavReserved = if (Preferences.useBottomNavigation) {
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 112.dp
+    } else 0.dp
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        contentPadding = PaddingValues(start = 0.dp, top = 8.dp, end = 0.dp, bottom = 8.dp + bottomNavReserved),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        when (category) {
-            SettingsCategory.Appearance -> {
-                item { SettingsGroupTitle(stringResource(R.string.theme)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.dark_theme),
-                        valueText = state.darkModeLabel,
-                        iconRes = R.drawable.ic_baseline_moon_24,
-                        onClick = { activeDialog = HomeSettingsChoiceDialog.DarkMode },
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.theme_color),
-                        valueText = state.themeColorName,
-                        iconRes = R.drawable.ic_baseline_theme_24,
-                        onClick = { activeDialog = HomeSettingsChoiceDialog.ThemeColor },
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.pure_black_dark_mode),
-                        summary = stringResource(R.string.pure_black_dark_mode_summary),
-                        checked = state.pureBlackDarkMode,
-                        iconRes = R.drawable.ic_baseline_contrast_24,
-                        onCheckedChange = onPureBlackDarkModeChange,
-                    )
-                }
+        // ── 外观 ──
+        item { SettingsGroupTitle(stringResource(R.string.theme)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.dark_theme),
+                valueText = state.darkModeLabel,
+                iconRes = R.drawable.ic_baseline_moon_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.DarkMode },
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.theme_color),
+                valueText = state.themeColorName,
+                iconRes = R.drawable.ic_baseline_theme_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.ThemeColor },
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.app_lang),
+                summary = stringResource(R.string.app_lang_sum),
+                valueText = state.appLanguageLabel,
+                iconRes = R.drawable.ic_setting_lang,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.AppLanguage },
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.horizontal_card_count_title),
+                summary = stringResource(R.string.horizontal_card_count_summary),
+                valueText = state.horizontalCardCountSummary,
+                iconRes = R.drawable.baseline_row_24,
+                onClick = { showHorizontalCardCountDialog = true },
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.home_category_layout),
+                summary = stringResource(
+                    R.string.home_category_layout_summary,
+                    state.homeCategoryItems.size - state.hiddenHomeCategoryKeys.size,
+                    state.homeCategoryItems.size,
+                ),
+                iconRes = R.drawable.baseline_sort_24,
+                onClick = { showHomeCategoryDialog = true },
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.use_bottom_navigation),
+                summary = stringResource(R.string.use_bottom_navigation_summary),
+                checked = state.useBottomNavigation,
+                iconRes = R.drawable.ic_baseline_home_24,
+                onCheckedChange = onUseBottomNavigationChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.compact_mode),
+                summary = stringResource(R.string.compact_mode_summary),
+                checked = state.useCompactMode,
+                iconRes = R.drawable.baseline_grid_24,
+                onCheckedChange = onUseCompactModeChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.interaction_settings),
+                summary = stringResource(R.string.interaction_settings_summary),
+                iconRes = R.drawable.baseline_touch_24,
+                onClick = onOpenInteractionSettings,
+            )
+        }
 
-                item { SettingsGroupTitle(stringResource(R.string.settings_group_interface)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.home_category_layout),
-                        summary = stringResource(
-                            R.string.home_category_layout_summary,
-                            state.homeCategoryItems.size - state.hiddenHomeCategoryKeys.size,
-                            state.homeCategoryItems.size,
-                        ),
-                        iconRes = R.drawable.baseline_sort_24,
-                        onClick = { showHomeCategoryDialog = true },
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.search_grid_columns_title),
-                        summary = stringResource(R.string.search_grid_columns_summary),
-                        valueText = state.searchGridColumnsSummary,
-                        iconRes = R.drawable.baseline_grid_24,
-                        onClick = { showSearchGridColumnsDialog = true },
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.horizontal_card_count_title),
-                        summary = stringResource(R.string.horizontal_card_count_summary),
-                        valueText = state.horizontalCardCountSummary,
-                        iconRes = R.drawable.baseline_row_24,
-                        onClick = { showHorizontalCardCountDialog = true },
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.search_pagination),
-                        summary = stringResource(R.string.search_pagination_summary),
-                        checked = state.searchPagination,
-                        iconRes = R.drawable.baseline_paging_24,
-                        onCheckedChange = onSearchPaginationChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.related_video_as_tab),
-                        summary = stringResource(R.string.related_video_as_tab_summary),
-                        checked = state.relatedVideoAsTab,
-                        iconRes = R.drawable.ic_baseline_list_24,
-                        onCheckedChange = onRelatedVideoAsTabChange,
-                    )
-                }
+        // ── 播放 ──
+        item { SettingsGroupTitle(stringResource(R.string.playback)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.video_language),
+                valueText = state.videoLanguageLabel,
+                iconRes = R.drawable.baseline_simp_to_trad_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.VideoLanguage },
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.default_video_quilty),
+                valueText = state.defaultVideoQuality,
+                iconRes = R.drawable.ic_video_quilty,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.VideoQuality },
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.allow_pip_title),
+                summary = stringResource(R.string.allow_pip_disc),
+                checked = state.allowPipMode,
+                iconRes = R.drawable.ic_pip_mode,
+                onCheckedChange = onAllowPipModeChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.resume_playback_title),
+                summary = stringResource(R.string.resume_playback_summary),
+                checked = state.allowResumePlayback,
+                iconRes = R.drawable.ic_baseline_skip_24,
+                onCheckedChange = onAllowResumePlaybackChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.player_settings),
+                iconRes = R.drawable.ic_baseline_play_circle_outline_24,
+                onClick = onOpenPlayerSettings,
+            )
+        }
 
-                item { SettingsGroupTitle(stringResource(R.string.settings_group_app)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.app_lang),
-                        summary = stringResource(R.string.app_lang_sum),
-                        valueText = state.appLanguageLabel,
-                        iconRes = R.drawable.ic_setting_lang,
-                        onClick = { activeDialog = HomeSettingsChoiceDialog.AppLanguage },
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.show_exit_confirm),
-                        summary = stringResource(R.string.show_exit_confirm_summary),
-                        checked = state.showExitConfirm,
-                        iconRes = R.drawable.ic_baseline_close_24,
-                        onCheckedChange = onShowExitConfirmChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.disable_predictive_back_title),
-                        summary = "暂不可用 Temporarily unavailable",
-                        checked = state.disablePredictiveBack,
-                        iconRes = R.drawable.ic_baseline_arrow_back_24,
-                        onCheckedChange = onDisablePredictiveBackChange,
-                        enabled = false,
-                    )
-                }
+        // ── 内容与浏览 ──
+        item { SettingsGroupTitle(stringResource(R.string.content_and_browse)) }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.show_played_indicator),
+                summary = stringResource(R.string.show_played_indicator_summary),
+                checked = state.showPlayedIndicator,
+                iconRes = R.drawable.ic_baseline_history_24,
+                onCheckedChange = onShowPlayedIndicatorChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.clipboard_link_detect),
+                summary = stringResource(R.string.clipboard_link_detect_summary),
+                checked = state.clipboardLinkDetect,
+                iconRes = R.drawable.ic_baseline_scan_24,
+                onCheckedChange = onClipboardLinkDetectChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.h_keyframe_settings),
+                iconRes = R.drawable.baseline_h_24,
+                onClick = onOpenHKeyframeSettings,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.disable_comments_title),
+                summary = stringResource(R.string.disable_comments_sum),
+                checked = state.disableComments,
+                iconRes = R.drawable.ic_comments,
+                onCheckedChange = onDisableCommentsChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.search_artist_ignore_video_type),
+                summary = stringResource(R.string.search_artist_ignore_video_type_summary),
+                checked = state.searchArtistIgnoreVideoType,
+                iconRes = R.drawable.baseline_prohibit_24,
+                onCheckedChange = onSearchArtistIgnoreVideoTypeChange,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.tablet_mode),
+                summary = stringResource(R.string.tablet_mode_summary),
+                checked = state.tabletMode,
+                iconRes = R.drawable.ic_baseline_tablet_24,
+                onCheckedChange = onTabletModeChange,
+            )
+        }
+        if (state.tabletMode) {
+            item {
+                SettingNavigationItem(
+                    title = stringResource(R.string.search_grid_columns_title),
+                    summary = stringResource(R.string.search_grid_columns_summary),
+                    valueText = state.searchGridColumnsSummary,
+                    iconRes = R.drawable.baseline_grid_24,
+                    onClick = { showSearchGridColumnsDialog = true },
+                )
             }
+        }
 
-            SettingsCategory.Playback -> {
-                item { SettingsGroupTitle(stringResource(R.string.video)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.video_language),
-                        valueText = state.videoLanguageLabel,
-                        iconRes = R.drawable.baseline_simp_to_trad_24,
-                        onClick = { activeDialog = HomeSettingsChoiceDialog.VideoLanguage },
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.default_video_quilty),
-                        valueText = state.defaultVideoQuality,
-                        iconRes = R.drawable.ic_video_quilty,
-                        onClick = { activeDialog = HomeSettingsChoiceDialog.VideoQuality },
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.allow_pip_title),
-                        summary = stringResource(R.string.allow_pip_disc),
-                        checked = state.allowPipMode,
-                        iconRes = R.drawable.ic_pip_mode,
-                        onCheckedChange = onAllowPipModeChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.resume_playback_title),
-                        summary = stringResource(R.string.resume_playback_summary),
-                        checked = state.allowResumePlayback,
-                        iconRes = R.drawable.ic_baseline_skip_24,
-                        onCheckedChange = onAllowResumePlaybackChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.show_played_indicator),
-                        summary = stringResource(R.string.show_played_indicator_summary),
-                        checked = state.showPlayedIndicator,
-                        iconRes = R.drawable.ic_baseline_history_24,
-                        onCheckedChange = onShowPlayedIndicatorChange,
-                    )
-                }
-                item {
-                    SettingSliderItem(
-                        title = stringResource(R.string.watched_progress_threshold),
-                        summary = stringResource(
-                            R.string.watched_progress_threshold_summary,
-                            state.watchedProgressThreshold,
-                        ),
-                        value = state.watchedProgressThreshold,
-                        valueRange = 0..100,
-                        step = 10,
-                        iconRes = R.drawable.baseline_flag_24,
-                        onValueChange = onWatchedProgressThresholdChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.search_artist_ignore_video_type),
-                        summary = stringResource(R.string.search_artist_ignore_video_type_summary),
-                        checked = state.searchArtistIgnoreVideoType,
-                        iconRes = R.drawable.baseline_prohibit_24,
-                        onCheckedChange = onSearchArtistIgnoreVideoTypeChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.disable_mobile_data_warning),
-                        summary = stringResource(R.string.disable_mobile_data_warning_summary),
-                        checked = state.disableMobileDataWarning,
-                        iconRes = R.drawable.baseline_mobile_data_24,
-                        onCheckedChange = onDisableMobileDataWarningChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.disable_comments_title),
-                        summary = stringResource(R.string.disable_comments_sum),
-                        checked = state.disableComments,
-                        iconRes = R.drawable.ic_comments,
-                        onCheckedChange = onDisableCommentsChange,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.player_settings),
-                        iconRes = R.drawable.ic_baseline_play_circle_outline_24,
-                        onClick = onOpenPlayerSettings,
-                    )
-                }
-            }
+        // ── 内容过滤 ──
+        item { SettingsGroupTitle(stringResource(R.string.content_filter)) }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.block_tags_title),
+                summary = stringResource(R.string.block_tags_summary),
+                checked = state.blockTagsEnabled,
+                iconRes = R.drawable.baseline_prohibit_24,
+                onCheckedChange = onBlockTagsEnabledChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.blocked_tags_manage),
+                summary = pluralStringResource(R.plurals.blocked_tags_manage_summary, state.blockedTagsCount, state.blockedTagsCount),
+                iconRes = R.drawable.ic_baseline_clear_all_24,
+                onClick = { showBlockedTagsDialog = true },
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.block_keywords_title),
+                summary = stringResource(R.string.block_keywords_summary),
+                checked = state.blockKeywordsEnabled,
+                iconRes = R.drawable.baseline_prohibit_24,
+                onCheckedChange = onBlockKeywordsEnabledChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.blocked_keywords_manage),
+                summary = pluralStringResource(R.plurals.blocked_keywords_manage_summary, state.blockedKeywordsCount, state.blockedKeywordsCount),
+                iconRes = R.drawable.ic_baseline_clear_all_24,
+                onClick = { showBlockedKeywordsDialog = true },
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.comment_keywords_title),
+                summary = stringResource(R.string.comment_keywords_summary),
+                checked = state.commentKeywordsEnabled,
+                iconRes = R.drawable.baseline_prohibit_24,
+                onCheckedChange = onCommentKeywordsEnabledChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.blocked_comment_keywords_manage),
+                summary = pluralStringResource(R.plurals.blocked_comment_keywords_manage_summary, state.blockedCommentKeywordsCount, state.blockedCommentKeywordsCount),
+                iconRes = R.drawable.ic_baseline_clear_all_24,
+                onClick = { showBlockedCommentKeywordsDialog = true },
+            )
+        }
 
-            // 网络、下载和关键帧直接展示对应设置页，不再经过重复的聚合页。
-            SettingsCategory.Network,
-            SettingsCategory.Download,
-            SettingsCategory.Keyframes -> Unit
+        // ── 下载 ──
+        item { SettingsGroupTitle(stringResource(R.string.download)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.download_settings),
+                iconRes = R.drawable.ic_baseline_download_24,
+                onClick = onOpenDownloadSettings,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.storage_manager),
+                summary = stringResource(R.string.storage_manager_summary),
+                iconRes = R.drawable.baseline_storage_24,
+                onClick = onOpenStorageManager,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.collapse_downloaded_groups),
+                summary = stringResource(R.string.collapse_downloaded_groups_summary),
+                checked = state.collapseDownloadedGroup,
+                iconRes = R.drawable.ic_baseline_fold_24,
+                onCheckedChange = onCollapseDownloadedGroupChange,
+            )
+        }
 
-            SettingsCategory.Privacy -> {
-                item { SettingsGroupTitle(stringResource(R.string.privacy)) }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.analytics_title),
-                        summary = stringResource(R.string.analytics_summary),
-                        checked = state.useAnalytics,
-                        iconRes = R.drawable.baseline_data_usage_24,
-                        onCheckedChange = onUseAnalyticsChange,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.use_lock_screen),
-                        summary = stringResource(R.string.use_lock_screen_sum),
-                        checked = state.useLockScreen,
-                        iconRes = R.drawable.ic_setting_applock,
-                        onCheckedChange = onUseLockScreenChange,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.fake_app_icon),
-                        summary = stringResource(R.string.select_fake_icon),
-                        valueText = state.fakeLauncherIconName,
-                        iconRes = R.drawable.ic_baseline_mask,
-                        onClick = onOpenFakeLauncherIcon,
-                    )
-                }
-            }
+        // ── 网络 ──
+        item { SettingsGroupTitle(stringResource(R.string.network)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.network_settings),
+                iconRes = R.drawable.ic_baseline_language_24,
+                onClick = onOpenNetworkSettings,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.apply_deep_links),
+                summary = stringResource(R.string.apply_deep_links_summary),
+                iconRes = R.drawable.baseline_add_link_24,
+                onClick = onOpenApplyDeepLinks,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.disable_mobile_data_warning),
+                summary = stringResource(R.string.disable_mobile_data_warning_summary),
+                checked = state.disableMobileDataWarning,
+                iconRes = R.drawable.baseline_mobile_data_24,
+                onCheckedChange = onDisableMobileDataWarningChange,
+            )
+        }
 
-            SettingsCategory.Data -> {
-                item { SettingsGroupTitle(stringResource(R.string.settings_group_backup)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.backup_export_title),
-                        summary = stringResource(R.string.backup_export_summary),
-                        iconRes = R.drawable.baseline_backup_24,
-                        onClick = onExportBackup,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.backup_import_title),
-                        summary = stringResource(R.string.backup_import_summary),
-                        iconRes = R.drawable.baseline_restore_24,
-                        onClick = onImportBackup,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.clear_cache),
-                        summary = state.cacheSummary,
-                        iconRes = R.drawable.ic_baseline_clear_all_24,
-                        onClick = onClearCache,
-                    )
-                }
-            }
+        // ── 更新 ──
+        item { SettingsGroupTitle(stringResource(R.string.update)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.check_update),
+                summary = state.updateSummary,
+                iconRes = R.drawable.ic_baseline_update_24,
+                onClick = onCheckUpdate,
+            )
+        }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.use_ci_update_channel),
+                checked = state.useCIUpdateChannel,
+                iconRes = R.drawable.ic_setting_ci,
+                onCheckedChange = onUseCIUpdateChannelChange,
+            )
+        }
+        item {
+            SettingSliderItem(
+                title = stringResource(R.string.update_popup_interval_days),
+                summary = state.updatePopupIntervalSummary,
+                value = state.updatePopupIntervalDays,
+                valueRange = 0..30,
+                iconRes = R.drawable.ic_clock,
+                onValueChange = onUpdatePopupIntervalDaysChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.announcement_fetch_interval),
+                valueText = state.announcementFetchIntervalLabel,
+                iconRes = R.drawable.ic_baseline_campaign_24,
+                onClick = { activeDialog = HomeSettingsChoiceDialog.AnnouncementFetchInterval },
+            )
+        }
 
-            SettingsCategory.About -> {
-                item { SettingsGroupTitle(stringResource(R.string.update)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.check_update),
-                        summary = state.updateSummary,
-                        iconRes = R.drawable.ic_baseline_update_24,
-                        onClick = onCheckUpdate,
-                    )
-                }
-                item {
-                    SettingSwitchItem(
-                        title = stringResource(R.string.use_ci_update_channel),
-                        checked = state.useCIUpdateChannel,
-                        iconRes = R.drawable.ic_setting_ci,
-                        onCheckedChange = onUseCIUpdateChannelChange,
-                    )
-                }
-                item {
-                    SettingSliderItem(
-                        title = stringResource(R.string.update_popup_interval_days),
-                        summary = state.updatePopupIntervalSummary,
-                        value = state.updatePopupIntervalDays,
-                        valueRange = 0..30,
-                        iconRes = R.drawable.ic_clock,
-                        onValueChange = onUpdatePopupIntervalDaysChange,
-                    )
-                }
+        // ── 隐私与安全 ──
+        item { SettingsGroupTitle(stringResource(R.string.privacy)) }
+        item {
+            SettingSwitchItem(
+                title = stringResource(R.string.use_lock_screen),
+                summary = stringResource(R.string.use_lock_screen_sum),
+                checked = state.useLockScreen,
+                iconRes = R.drawable.ic_setting_applock,
+                onCheckedChange = onUseLockScreenChange,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.fake_app_icon),
+                summary = stringResource(R.string.select_fake_icon),
+                valueText = state.fakeLauncherIconName,
+                iconRes = R.drawable.ic_baseline_mask,
+                onClick = onOpenFakeLauncherIcon,
+            )
+        }
 
-                item { SettingsGroupTitle(stringResource(R.string.settings_group_feedback)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.submit_bug),
-                        summary = stringResource(R.string.submit_bug_summary),
-                        iconRes = R.drawable.baseline_bug_report_24,
-                        onClick = onSubmitBug,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.forum),
-                        summary = stringResource(R.string.forum_summary),
-                        iconRes = R.drawable.baseline_forum_24,
-                        onClick = onOpenForum,
-                    )
-                }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.open_source_license),
-                        iconRes = R.drawable.ic_oss,
-                        onClick = onOpenOpenSourceLicense,
-                    )
-                }
-
-                item { SettingsGroupTitle(stringResource(R.string.settings_group_version)) }
-                item {
-                    SettingNavigationItem(
-                        title = stringResource(R.string.about),
-                        summary = state.versionSummary,
-                        iconRes = R.drawable.ic_baseline_info_24,
-                        onClick = onOpenAboutPage,
-                    )
-                }
-            }
+        // ── 数据与关于 ──
+        item { SettingsGroupTitle(stringResource(R.string.data_and_about)) }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.backup_export_title),
+                summary = stringResource(R.string.backup_export_summary),
+                iconRes = R.drawable.baseline_backup_24,
+                onClick = onExportBackup,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.backup_import_title),
+                summary = stringResource(R.string.backup_import_summary),
+                iconRes = R.drawable.baseline_restore_24,
+                onClick = onImportBackup,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.submit_bug),
+                summary = stringResource(R.string.submit_bug_summary),
+                iconRes = R.drawable.baseline_bug_report_24,
+                onClick = onSubmitBug,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.forum),
+                summary = stringResource(R.string.forum_summary),
+                iconRes = R.drawable.baseline_forum_24,
+                onClick = onOpenForum,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.open_source_license),
+                iconRes = R.drawable.ic_oss,
+                onClick = onOpenOpenSourceLicense,
+            )
+        }
+        item {
+            SettingNavigationItem(
+                title = stringResource(R.string.about),
+                summary = state.versionSummary,
+                iconRes = R.drawable.ic_baseline_info_24,
+                onClick = onOpenAbout,
+            )
         }
     }
 }
@@ -548,5 +702,108 @@ private fun SettingsGroupTitle(title: String) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         )
         HorizontalDivider()
+    }
+}
+
+@Preview(showBackground = true, widthDp = 420, heightDp = 1000)
+@Composable
+private fun HomeSettingsScreenPreview() {
+    ComponentPreview {
+        HomeSettingsScreen(
+            state = HomeSettingsUiState(
+                videoLanguage = "zhs",
+                videoLanguageLabel = "简体中文",
+                defaultVideoQuality = "1080P",
+                darkMode = "follow_system",
+                darkModeLabel = "跟随系统",
+                appLanguage = "system",
+                appLanguageLabel = "跟随系统",
+                allowPipMode = true,
+                allowResumePlayback = true,
+                showPlayedIndicator = true,
+                clipboardLinkDetect = true,
+                blockTagsEnabled = true,
+                blockedTags = setOf("萝莉", "催眠"),
+                blockedTagsCount = 2,
+                blockKeywordsEnabled = true,
+                blockedKeywords = setOf("NTR"),
+                blockedKeywordsCount = 1,
+                searchArtistIgnoreVideoType = false,
+                disableMobileDataWarning = false,
+                tabletMode = false,
+                disableComments = false,
+                collapseDownloadedGroup = false,
+                useDynamicColor = true,
+                useCIUpdateChannel = false,
+                useLockScreen = false,
+                fakeLauncherIconName = "Han1meViewer",
+                updateSummary = "已經是最新版本！",
+                        versionSummary = "當前版本：v1.0.0",
+                updatePopupIntervalSummary = "7天\n最近還沒跳出過更新視窗哦",
+                updatePopupIntervalDays = 7,
+                announcementFetchIntervalHours = 6,
+                announcementFetchIntervalLabel = "6 小時",
+                dynamicColorEnabled = true,
+                themeColorKey = "default",
+                themeColorName = "預設（暖紅）",
+                searchGridColumnsSummary = "2 / 3 / 4 / 5",
+                searchGridColumnsConfig = SearchGridColumnsConfig(),
+                horizontalCardCountSummary = "1.5 / 2.1 / 4.1 / 5.1",
+                horizontalCardCountConfig = HorizontalCardCountConfig(),
+                homeCategoryItems = emptyList(),
+                homeCategoryOrder = emptyList(),
+                hiddenHomeCategoryKeys = emptySet(),
+                useAvHomeCategoryTitles = false,
+                useBottomNavigation = false,
+                useCompactMode = false,
+                commentKeywordsEnabled = true,
+                blockedCommentKeywords = setOf("催婚"),
+                blockedCommentKeywordsCount = 1,
+            ),
+            onVideoLanguageChange = {},
+            onVideoQualityChange = {},
+            onDarkModeChange = {},
+            onAllowPipModeChange = {},
+            onAllowResumePlaybackChange = {},
+            onShowPlayedIndicatorChange = {},
+            onClipboardLinkDetectChange = {},
+            onBlockTagsEnabledChange = {},
+            onBlockedTagsChange = {},
+            onBlockKeywordsEnabledChange = {},
+            onBlockedKeywordsChange = {},
+            onCommentKeywordsEnabledChange = {},
+            onBlockedCommentKeywordsChange = {},
+            onSearchArtistIgnoreVideoTypeChange = {},
+            onDisableMobileDataWarningChange = {},
+            onTabletModeChange = {},
+            onUseBottomNavigationChange = {},
+            onUseCompactModeChange = {},
+            onDisableCommentsChange = {},
+            onCollapseDownloadedGroupChange = {},
+            onSearchGridColumnsConfigChange = {},
+            onHorizontalCardCountConfigChange = {},
+            onUseCIUpdateChannelChange = {},
+            onUseLockScreenChange = {},
+            onThemeColorChange = {},
+            onHomeCategoryPreferencesChange = { _, _ -> },
+            onOpenPlayerSettings = {},
+            onOpenInteractionSettings = {},
+            onOpenHKeyframeSettings = {},
+            onOpenDownloadSettings = {},
+            onOpenStorageManager = {},
+            onOpenNetworkSettings = {},
+            onOpenAppLanguageSettings = {},
+            onCheckUpdate = {},
+            onUpdatePopupIntervalDaysChange = {},
+            onAnnouncementFetchIntervalHoursChange = {},
+            onOpenApplyDeepLinks = {},
+            onOpenFakeLauncherIcon = {},
+            onOpenOpenSourceLicense = {},
+            onOpenAbout = {},
+            onExportBackup = {},
+            onImportBackup = {},
+            onSubmitBug = {},
+            onOpenForum = {},
+        )
     }
 }

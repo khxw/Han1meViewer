@@ -51,7 +51,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -669,16 +668,9 @@ fun PlayerSlider(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sliderState = remember { SliderState(value) }
-
-    LaunchedEffect(value) {
-        if (!sliderState.isDragging) {
-            sliderState.value = value
-        }
-    }
 
     Slider(
-        state = sliderState,
+        value = value,
         onValueChange = onValueChange,
         modifier = modifier,
 

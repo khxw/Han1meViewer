@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_diagnostics_check_transport">Current network type</string>
+    <string name="network_diagnostics_check_wifi_hotspot">Wi‑Fi / hotspot characteristics</string>
+    <string name="network_diagnostics_transport_wifi">Wi‑Fi</string>
+    <string name="network_diagnostics_transport_cellular">Mobile data</string>
+    <string name="network_diagnostics_transport_ethernet">Ethernet</string>
+    <string name="network_diagnostics_transport_vpn">VPN</string>
+    <string name="network_diagnostics_transport_bluetooth">Bluetooth network</string>
+    <string name="network_diagnostics_transport_other">Other network</string>
+    <string name="network_diagnostics_transport_none">No network connection</string>
+    <string name="network_diagnostics_network_validated">Internet access validated</string>
+    <string name="network_diagnostics_network_not_validated">Internet access not validated yet</string>
+    <string name="network_diagnostics_network_metered">Metered network</string>
+    <string name="network_diagnostics_network_unmetered">Unmetered network</string>
+    <string name="network_diagnostics_hotspot_suspected">Likely connected to a phone hotspot</string>
+    <string name="network_diagnostics_hotspot_router">No common phone-hotspot signature detected</string>
+    <string name="network_diagnostics_hotspot_not_wifi">Not connected through Wi‑Fi; hotspot detection skipped</string>
+    <string name="network_diagnostics_hotspot_gateway">Gateway: %1$s</string>
+    <string name="network_diagnostics_hotspot_dns">DNS: %1$s</string>
+    <string name="network_diagnostics_hotspot_advice">The hotspot provider’s proxy, Private DNS, VPN, or carrier filtering can affect this device</string>
+    <string name="network_diagnostics_conclusion_hotspot">A phone hotspot is likely, and the main site is unreachable. The hotspot provider’s proxy, Private DNS, VPN, carrier, or forwarding path may be responsible.</string>
+    <string name="network_diagnostics_suggest_hotspot">Suggestion: disable the hotspot provider’s VPN/proxy/Private DNS, or compare with another Wi‑Fi/mobile network.</string>
+    <string name="network_diagnostics_conclusion_offline">No usable network connection is available.</string>
+    <string name="network_diagnostics_suggest_connect_network">Suggestion: connect to Wi‑Fi or mobile data and run diagnostics again.</string>
+    <string name="network_diagnostics_check_network_environment">Network &amp; hotspot environment</string>
+    <string name="network_diagnostics_conclusion_vpn_blocked">A VPN is active, but the main site is still unreachable. The VPN exit may be rejected by Cloudflare, the node route may be faulty, or the protocol may be interfered with.</string>
+    <string name="network_diagnostics_suggest_vpn">Suggestion: switch VPN nodes or protocols, or temporarily disable the VPN for comparison.</string>
+    <string name="network_diagnostics_conclusion_network_unvalidated">A network connection exists, but Android has not validated internet access. A hotspot login page, captive portal, Private DNS, or upstream network issue may be present.</string>
+    <string name="network_diagnostics_suggest_network_unvalidated">Suggestion: confirm internet access in a browser and check the hotspot portal, Private DNS, and upstream network.</string>
+    <string name="network_diagnostics_conclusion_hosts_tls_blocked">Built-in Hosts IPs accept TCP connections, but the main site HTTPS request still fails. DNS is bypassed, so the problem is TLS/SNI, Cloudflare routing, or an intermediary network block.</string>
+    <string name="network_diagnostics_conclusion_doh_tls_blocked">DoH resolved the domain, but the main site HTTPS request still fails. DNS is not the problem; TLS/SNI or the route is being blocked.</string>
+    <string name="network_diagnostics_suggest_tls_blocked">Suggestion: changing domains or Hosts usually will not help; switch networks, disable an intermediary proxy, or use a working proxy.</string>
+    <string name="network_diagnostics_conclusion_main_rate_limited">The main site returned HTTP %1$d, and the request was rejected by the server or Cloudflare. This may be rate limiting, a regional restriction, or a risky exit IP rather than a DNS/TLS failure.</string>
+    <string name="network_diagnostics_suggest_main_rate_limited">Suggestion: wait a few minutes, switch networks, or try another working proxy node.</string>
+    <string name="network_diagnostics_conclusion_main_server_error">The main site returned HTTP %1$d; the server or Cloudflare is currently having problems.</string>
+    <string name="network_diagnostics_suggest_main_server_error">Suggestion: retry later and check the site service status.</string>
+    <string name="network_diagnostics_conclusion_main_http_error">The main site returned HTTP %1$d. The server was reached, but its home-page response is abnormal.</string>
+</resources>

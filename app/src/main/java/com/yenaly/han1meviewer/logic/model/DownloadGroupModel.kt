@@ -16,7 +16,6 @@ import com.yenaly.han1meviewer.logic.entity.download.VideoWithCategories
 sealed class DownloadedNode
 
 data class DownloadHeaderNode(
-    val groupId: Int,
     val groupKey: String,
     val originalVideos: List<VideoWithCategories>,
     var isExpanded: Boolean = true
@@ -24,5 +23,5 @@ data class DownloadHeaderNode(
 
 data class DownloadItemNode(
     val data: VideoWithCategories,
-    val parentKey: Int
+    val parentKey: String
 ) : DownloadedNode()

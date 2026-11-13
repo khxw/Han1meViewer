@@ -658,6 +658,16 @@
   "appearance_and_figure": [
     {
       "lang": {
+        "zh-rCN": "萝莉",
+        "en": "Loli",
+        "zh-rTW": "蘿莉",
+        "ja": "ロリ"
+      },
+      "name": "萝莉",
+      "search_key": "萝莉"
+    },
+    {
+      "lang": {
         "zh-rCN": "短发",
         "en": "Short Hair",
         "zh-rTW": "短髮",
@@ -1370,6 +1380,16 @@
     }
   ],
   "story_plot": [
+    {
+      "lang": {
+        "zh-rCN": "催眠",
+        "en": "Hypnosis",
+        "zh-rTW": "催眠",
+        "ja": "催眠術"
+      },
+      "name": "催眠",
+      "search_key": "催眠"
+    },
     {
       "lang": {
         "zh-rCN": "纯爱",

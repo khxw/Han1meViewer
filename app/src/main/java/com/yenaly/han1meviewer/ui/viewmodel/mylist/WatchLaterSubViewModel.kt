@@ -28,18 +28,19 @@ class WatchLaterSubViewModel(application: Application) : MyListSubViewModel(appl
     private val _deleteMyWatchLaterFlow = MutableSharedFlow<WebsiteState<Boolean>>()
     val deleteMyWatchLaterFlow = _deleteMyWatchLaterFlow.asSharedFlow()
 
-    fun deleteMyWatchLater(videoCode: String) {
+    fun deleteMyWatchLater(videoCode: String, position: Int) {
         deleteItem(
             deleteCall = {
                 NetworkRepo.addToMyList(
                     listCode = "save",
                     videoCode = videoCode,
                     isChecked = false,
+                    position = position,
                     csrfToken = csrfToken,
                 )
             },
             emitTo = _deleteMyWatchLaterFlow,
-            identifier = videoCode,
+            position = position,
             mapState = { state ->
                 when (state) {
                     is WebsiteState.Error -> WebsiteState.Error(state.throwable)

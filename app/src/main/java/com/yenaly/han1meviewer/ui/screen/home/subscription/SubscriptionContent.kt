@@ -34,7 +34,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -47,13 +46,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.SubscriptionItem
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.ui.component.ArtistItem
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
-import com.yenaly.han1meviewer.ui.component.PaginationPager
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.preview.fakeArtists
@@ -63,7 +60,6 @@ import com.yenaly.han1meviewer.ui.theme.ArtistIconSize
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 /**
  * 订阅页面 Content 层。纯 UI，不持有 ViewModel。
@@ -95,16 +91,13 @@ fun SubscriptionContent(
     )
     var currentPage by remember { mutableIntStateOf(1) }
     val pageSize = 60
-    val searchPagination = Preferences.searchPagination
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(gridState, uiState.videos.size, searchPagination) {
+    LaunchedEffect(gridState, uiState.videos.size) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo }
             .map { it.lastOrNull()?.index }
             .distinctUntilChanged()
             .collect { lastVisibleIndex ->
-                if (!searchPagination &&
-                    lastVisibleIndex != null &&
+                if (lastVisibleIndex != null &&
                     lastVisibleIndex >= uiState.videos.size - 4 &&
                     uiState.videos.size >= currentPage * pageSize &&
                     uiState.canLoadMore
@@ -178,23 +171,11 @@ fun SubscriptionContent(
             }
             if (uiState.videos.isNotEmpty()) {
                 item(span = { GridItemSpan(videoColumns) }) {
-                    if (searchPagination) {
-                        PaginationPager(
-                            currentPage = uiState.currentPage,
-                            totalPages = uiState.maxPage,
-                            onPageSelected = { page ->
-                                onEvent(SubscriptionEvent.OnGoToPage(page))
-                                scope.launch { gridState.scrollToItem(0) }
-                            },
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    } else {
-                        LoadMoreFooter(
-                            state = PageLoadingState.Success(emptyList<String>()),
-                            isLoadingMore = uiState.canLoadMore,
-                            loadedPage = currentPage
-                        )
-                    }
+                    LoadMoreFooter(
+                        state = PageLoadingState.Success(emptyList<String>()),
+                        isLoadingMore = uiState.canLoadMore,
+                        loadedPage = currentPage
+                    )
                 }
             }
         }

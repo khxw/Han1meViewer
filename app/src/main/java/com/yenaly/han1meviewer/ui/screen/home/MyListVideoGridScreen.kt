@@ -7,7 +7,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -25,11 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.component.BottomNavAwareSnackbarHost
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.component.PageContent
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
@@ -70,7 +69,6 @@ fun VideoGridScreen(
     state: PageLoadingState<*>,
     deleteStateFlow: Flow<WebsiteState<Boolean>>,
     loadedPageCount: Int,
-    totalPages: Int,
     isLoadingMore: Boolean,
     titleRes: Int,
     helpMessageRes: Int,
@@ -80,7 +78,6 @@ fun VideoGridScreen(
     onDeleteItem: (HanimeInfo) -> Unit,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
-    onGoToPage: (Int) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -89,7 +86,6 @@ fun VideoGridScreen(
     var pendingRefresh by rememberSaveable { mutableStateOf(false) }
     val deleteFailedText = stringResource(R.string.delete_failed)
     val deleteSuccessText = stringResource(R.string.delete_success)
-    val searchPagination = Preferences.searchPagination
 
     val refreshing = state is PageLoadingState.Loading && pendingRefresh
     val refreshingState = rememberPullToRefreshState()
@@ -110,8 +106,8 @@ fun VideoGridScreen(
         }
     }
 
-    LaunchedEffect(gridState.canLoadMore(items, state), pendingRefresh, isLoadingMore, searchPagination) {
-        if (!searchPagination && gridState.canLoadMore(items, state) && !pendingRefresh && !isLoadingMore) {
+    LaunchedEffect(gridState.canLoadMore(items, state), pendingRefresh, isLoadingMore) {
+        if (gridState.canLoadMore(items, state) && !pendingRefresh && !isLoadingMore) {
             onLoadMore()
         }
     }
@@ -153,7 +149,6 @@ fun VideoGridScreen(
         items = items,
         state = state,
         loadedPageCount = loadedPageCount,
-        totalPages = totalPages,
         isLoadingMore = isLoadingMore,
         isRefreshing = refreshing,
         isError = isError,
@@ -178,7 +173,7 @@ fun VideoGridScreen(
                 )
             }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { BottomNavAwareSnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = refreshing,
@@ -225,7 +220,6 @@ fun VideoGridScreen(
                     gridState = gridState,
                     onOpenVideo = onOpenVideo,
                     onDeleteItem = { pendingDelete = it },
-                    onGoToPage = onGoToPage,
                 )
             }
         }
@@ -241,7 +235,6 @@ private fun VideoGridScreenPreview() {
             state = PageLoadingState.Success(Unit),
             deleteStateFlow = flowOf(WebsiteState.Success(true)),
             loadedPageCount = 2,
-            totalPages = 10,
             isLoadingMore = false,
             titleRes = R.string.fav_video,
             helpMessageRes = R.string.long_press_to_cancel_fav,
@@ -251,7 +244,6 @@ private fun VideoGridScreenPreview() {
             onDeleteItem = {},
             onRefresh = {},
             onLoadMore = {},
-            onGoToPage = {},
         )
     }
 }

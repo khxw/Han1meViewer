@@ -46,7 +46,6 @@ data class NetworkSettingsUiState(
     val domainDisplay: String,
     val proxySummary: String,
     val useBuiltInHosts: Boolean,
-    val useBackupMediaCdn: Boolean,
     val useCustomMirrorSite: Boolean,
     val customMirrorSite: String,
     val appendCustomMirrorPath: Boolean,
@@ -99,8 +98,6 @@ fun NetworkSettingsScreen(
     onDomainChange: (String) -> Unit,
     onSaveCustomMirrorSite: (Boolean, String, Boolean) -> Unit,
     onTestCustomMirrorSite: (String, Boolean) -> Unit,
-    useBackupMediaCdn: Boolean,
-    onUseBackupMediaCdnChange: (Boolean) -> Unit,
     onUseBuiltInHostsChange: (Boolean) -> Unit,
     onSaveCustomHosts: (String) -> Unit,
     onSaveDohSettings: (Boolean, String, String, String, Int) -> Unit,
@@ -110,7 +107,9 @@ fun NetworkSettingsScreen(
     onDismissDelayTest: () -> Unit,
     onDismissDohTest: () -> Unit,
     onApplyProxy: (Int, String, Int) -> Unit,
-    onOpenApplyDeepLinks: () -> Unit,
+    onOpenCloudflareManualImport: () -> Unit,
+    onOpenLogs: () -> Unit,
+    onOpenNetworkDiagnostics: () -> Unit = {},
 ) {
     var showDomainDialog by rememberSaveable { mutableStateOf(false) }
     var showProxyDialog by rememberSaveable { mutableStateOf(false) }
@@ -235,12 +234,11 @@ fun NetworkSettingsScreen(
         }
 
         item {
-            SettingSwitchItem(
-                title = stringResource(R.string.use_backup_media_cdn),
-                summary = stringResource(R.string.use_backup_media_cdn_summary),
-                checked = useBackupMediaCdn,
-                iconRes = R.drawable.baseline_domain_24,
-                onCheckedChange = onUseBackupMediaCdnChange,
+            SettingNavigationItem(
+                title = stringResource(R.string.cf_manual_import_setting_title),
+                summary = stringResource(R.string.cf_manual_import_setting_summary),
+                iconRes = R.drawable.baseline_vpn_24,
+                onClick = onOpenCloudflareManualImport,
             )
         }
 
@@ -278,6 +276,15 @@ fun NetworkSettingsScreen(
 
         item {
             SettingNavigationItem(
+                title = stringResource(R.string.network_diagnostics),
+                summary = stringResource(R.string.network_diagnostics_summary),
+                iconRes = R.drawable.ic_baseline_scan_24,
+                onClick = onOpenNetworkDiagnostics,
+            )
+        }
+
+        item {
+            SettingNavigationItem(
                 title = stringResource(R.string.view_node_latency),
                 summary = state.delaySummary,
                 iconRes = R.drawable.baseline_delay_24,
@@ -296,10 +303,10 @@ fun NetworkSettingsScreen(
 
         item {
             SettingNavigationItem(
-                title = stringResource(R.string.apply_deep_links),
-                summary = stringResource(R.string.apply_deep_links_summary),
-                iconRes = R.drawable.baseline_add_link_24,
-                onClick = onOpenApplyDeepLinks,
+                title = stringResource(R.string.log_settings),
+                summary = stringResource(R.string.log_settings_summary),
+                iconRes = R.drawable.baseline_bug_report_24,
+                onClick = onOpenLogs,
             )
         }
     }
@@ -805,7 +812,6 @@ private fun NetworkSettingsScreenPreview() {
                 domainDisplay = "hanime1.me (默认)",
                 proxySummary = "系统代理",
                 useBuiltInHosts = false,
-                useBackupMediaCdn = false,
                 useCustomMirrorSite = false,
                 customMirrorSite = "",
                 appendCustomMirrorPath = true,
@@ -844,8 +850,6 @@ private fun NetworkSettingsScreenPreview() {
             onDomainChange = {},
             onSaveCustomMirrorSite = { _, _, _ -> },
             onTestCustomMirrorSite = { _, _ -> },
-            useBackupMediaCdn = false,
-            onUseBackupMediaCdnChange = {},
             onUseBuiltInHostsChange = {},
             onSaveCustomHosts = {},
             customHostsData = "",
@@ -855,7 +859,8 @@ private fun NetworkSettingsScreenPreview() {
             onDismissDelayTest = {},
             onDismissDohTest = {},
             onApplyProxy = { _, _, _ -> },
-            onOpenApplyDeepLinks = {},
+            onOpenCloudflareManualImport = {},
+            onOpenLogs = {},
         )
     }
 }

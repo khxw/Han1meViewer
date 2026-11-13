@@ -2,6 +2,7 @@ package com.yenaly.han1meviewer.logic.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.yenaly.han1meviewer.logic.model.WatchProgress
 import kotlinx.serialization.Serializable
 
 /**
@@ -18,10 +19,14 @@ data class WatchHistoryEntity(
     val watchDate: Long,
     val videoCode: String,
     val progress: Long = 0L,
-    val watched: Boolean = false,
+    val duration: Long = 0L,
+    val isCompleted: Boolean = false,
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
 ) {
+    /** 看完，或进度达到 90% 才算已看；仅仅打开过视频不算。 */
+    val isWatched: Boolean
+        get() = WatchProgress.isWatched(progress, duration, isCompleted)
 
     val releaseDateDays: Int
         get() = (releaseDate / (24 * 60 * 60 * 1000)).toInt()

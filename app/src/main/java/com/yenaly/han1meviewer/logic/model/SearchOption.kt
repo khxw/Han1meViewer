@@ -4,7 +4,7 @@ import android.os.Parcelable
 import android.util.SparseArray
 import androidx.core.util.valueIterator
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.base.AppLocale
+import com.yenaly.yenaly_libs.utils.LanguageHelper
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -73,7 +73,7 @@ data class SearchOption(
     val value: String
         get() = when {
             lang == null -> name.orEmpty()
-            else -> AppLocale.preferredLanguage.let { pl ->
+            else -> LanguageHelper.preferredLanguage.let { pl ->
                 when (pl.language) {
                     Locale.CHINESE.language -> when (pl.country) {
                         Locale.SIMPLIFIED_CHINESE.country -> lang.zhrCN

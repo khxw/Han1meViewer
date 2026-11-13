@@ -6,23 +6,27 @@ import androidx.core.content.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.database.FirebaseDatabase
-import com.yenaly.han1meviewer.FIREBASE_REALTIME_DATABASE
+import com.yenaly.han1meviewer.HJson
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.SAVED_USER_ID
 import com.yenaly.han1meviewer.logic.DatabaseRepo
+import com.yenaly.han1meviewer.logic.HomePageCache
 import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.model.Announcement
+import com.yenaly.han1meviewer.logic.model.AnnouncementDto
+import com.yenaly.han1meviewer.logic.model.HomePage
+import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.logic.state.PageState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.logout
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel
-import com.yenaly.han1meviewer.util.getSpValue
-import com.yenaly.han1meviewer.util.putSpValue
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.utils.getSpValue
+import com.yenaly.yenaly_libs.utils.putSpValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -32,9 +36,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
+import kotlinx.serialization.decodeFromString
 import kotlin.time.Duration.Companion.milliseconds
 
 class HomePageViewModel: ViewModel() {
@@ -46,12 +50,13 @@ class HomePageViewModel: ViewModel() {
     private val _homePageFlow = MutableStateFlow<PageState<HomeData>>(PageState.Loading)
     val homePageFlow = _homePageFlow.asStateFlow()
 
-    private val database = FirebaseDatabase.getInstance(FIREBASE_REALTIME_DATABASE)
-
     private val _sessionExpiredMessage = MutableSharedFlow<SessionExpiredMessage>()
     val sessionExpiredMessage = _sessionExpiredMessage
 
     private var homePageJob: Job? = null
+
+    /** 用户显式下拉刷新的次数。轮播图用它决定是否换一批内容。 */
+    private var refreshEpoch = 0
 
     init {
         viewModelScope.launch {
@@ -69,11 +74,21 @@ class HomePageViewModel: ViewModel() {
             } else if (isRefresh && current is PageState.Error && current.cachedInfo != null) {
                 _homePageFlow.value = PageState.Success(info = current.cachedInfo, isRefreshing = true)
             } else if (!isRefresh && current !is PageState.Success){
-                _homePageFlow.value = PageState.Loading
+                // 冷启动（后台被杀后重新打开）时优先展示本地缓存，避免整页转圈；
+                // 网络刷新成功后自动替换为新数据，刷新失败则保留缓存内容
+                val cached = withContext(Dispatchers.IO) { HomePageCache.load() }
+                if (cached != null) {
+                    _homePageFlow.value = PageState.Success(
+                        info = HomeData(page = cached.markWatched(), announcements = emptyList()),
+                        isRefreshing = false
+                    )
+                } else {
+                    _homePageFlow.value = PageState.Loading
+                }
             }
             val announcementsDeferred = async(Dispatchers.IO) {
                 withTimeoutOrNull(ANNOUNCEMENTS_TIMEOUT_MILLIS.milliseconds) {
-                    fetchAnnouncementsFromFirebase()
+                    fetchAnnouncements()
                 }.orEmpty()
             }
             NetworkRepo.getHomePage().collect { networkState ->
@@ -98,7 +113,16 @@ class HomePageViewModel: ViewModel() {
                         networkState.info.userId.takeIf { it.isNotEmpty() }?.let { userId ->
                             Preferences.preferenceSp.edit { putString(SAVED_USER_ID, userId) }
                         }
-                        val homeData = HomeData(page = networkState.info, announcements = currentAnnouncements)
+                        // 只有用户主动下拉刷新才推进 epoch：
+                        // 轮播图据此重新洗牌换一批内容，而冷启动/失败重试/关闭公告都不会动它。
+                        if (isRefresh) refreshEpoch++
+                        val homeData = HomeData(
+                            page = networkState.info.markWatched(),
+                            announcements = currentAnnouncements,
+                            refreshEpoch = refreshEpoch,
+                        )
+                        // 网络加载成功后更新本地缓存，供下次冷启动秒显
+                        withContext(Dispatchers.IO) { HomePageCache.save(networkState.info) }
                         _homePageFlow.value = PageState.Success(info = homeData, isRefreshing = false)
                     }
                     is WebsiteState.Loading -> { }
@@ -106,47 +130,56 @@ class HomePageViewModel: ViewModel() {
             }
         }
     }
-    private suspend fun fetchAnnouncementsFromFirebase(): List<Announcement> =
-        suspendCancellableCoroutine { continuation ->
-            val lastDismissTime = getSpValue("last_dismiss_time", 0L, "setting_pref")
-            val shouldShowAnno = System.currentTimeMillis() - lastDismissTime > 24 * 60 * 60 * 1000L
-            if (!shouldShowAnno) {
-                continuation.resume(emptyList())
-                return@suspendCancellableCoroutine
+    /**
+     * 实际向 GitHub Contents API 请求 announcements.json，不受拉取间隔限制。
+     * 返回 null 代表请求/解析失败，交给调用方决定是否重置节流计时。
+     */
+    private suspend fun fetchAnnouncementsFromNetwork(): List<Announcement>? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val response = HanimeNetwork.githubService.getAnnouncements()
+                if (!response.isSuccessful) return@runCatching null
+                val body = response.body()?.string().orEmpty()
+                HJson.decodeFromString<List<AnnouncementDto>>(body)
+                    .filter { it.isActive }
+                    .sortedBy { it.priority }
+                    .map { it.toAnnouncement() }
+            }.getOrElse { e ->
+                Log.e("Announcement", "读取失败: ${e.message}")
+                null
             }
-
-            database.getReference("announcements").get()
-                .addOnSuccessListener { snapshot ->
-                    val list = mutableListOf<Announcement>()
-                    if (snapshot.exists()) {
-                        for (announceSnap in snapshot.children) {
-                            val announcement = announceSnap.getValue(Announcement::class.java)
-                            if (announcement != null && announcement.isActive) {
-                                list.add(announcement)
-                            }
-                        }
-                        if (continuation.isActive) {
-                            continuation.resume(list.sortedBy { it.priority })
-                        }
-                    } else {
-                        if (continuation.isActive) {
-                            continuation.resume(emptyList())
-                        }
-                    }
-                }.addOnFailureListener { e ->
-                    Log.e("Announcement", "读取失败: ${e.message}")
-                    if (continuation.isActive) {
-                        continuation.resume(emptyList()) // 失败也容错返回空列表
-                    }
-                }
         }
 
+    /**
+     * 首页自动加载调用，按 [Preferences.announcementFetchIntervalHours] 节流：
+     * 距上次成功拉取不足设定间隔时跳过网络请求；间隔为 0 表示用户关闭了公告拉取。
+     */
+    private suspend fun fetchAnnouncements(): List<Announcement> = withContext(Dispatchers.IO) {
+        val intervalHours = Preferences.announcementFetchIntervalHours
+        if (intervalHours <= 0) return@withContext emptyList()
+
+        val lastFetchTime = getSpValue("last_announcement_fetch_time", 0L, "setting_pref")
+        val intervalMillis = intervalHours * 60 * 60 * 1000L
+        if (System.currentTimeMillis() - lastFetchTime < intervalMillis) return@withContext emptyList()
+
+        val result = fetchAnnouncementsFromNetwork()
+        if (result != null) {
+            putSpValue("last_announcement_fetch_time", System.currentTimeMillis(), "setting_pref")
+        }
+        result ?: emptyList()
+    }
+
+    /**
+     * 供左侧菜单“查看公告”手动触发，直接请求最新公告，不受拉取间隔节流影响。
+     */
+    suspend fun fetchAnnouncementsForViewing(): List<Announcement> =
+        fetchAnnouncementsFromNetwork() ?: emptyList()
+
     private companion object {
-        const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 5_000L
+        const val ANNOUNCEMENTS_TIMEOUT_MILLIS = 10_000L
     }
 
     fun dismissAnnouncements(){
-        putSpValue("last_dismiss_time", System.currentTimeMillis(), "setting_pref")
         val current = _homePageFlow.value
         if (current is PageState.Success) {
             _homePageFlow.value = current.copy(info = current.info.copy(announcements = emptyList()))
@@ -169,6 +202,11 @@ class HomePageViewModel: ViewModel() {
 
     fun loadAllWatchHistories() =
         DatabaseRepo.WatchHistory.loadAll()
+            .catch { e -> e.printStackTrace() }
+            .flowOn(Dispatchers.IO)
+
+    fun loadContinueWatching(limit: Int = 10) =
+        DatabaseRepo.WatchHistory.loadContinueWatching(limit)
             .catch { e -> e.printStackTrace() }
             .flowOn(Dispatchers.IO)
     private val _modifyHKeyframeFlow = MutableSharedFlow<Boolean>()
@@ -201,3 +239,22 @@ class HomePageViewModel: ViewModel() {
         }
     }
 }
+
+/**
+ * 为首页所有分类行的视频标记"已看"状态（受"已看角标"开关控制）。
+ */
+private suspend fun HomePage.markWatched(): HomePage = copy(
+    latestHanime = markWatchedList(latestHanime).toMutableList(),
+    latestRelease = markWatchedList(latestRelease).toMutableList(),
+    ecchiAnime = markWatchedList(ecchiAnime).toMutableList(),
+    shortEpisodeAnime = markWatchedList(shortEpisodeAnime).toMutableList(),
+    twoPointFiveDAnime = markWatchedList(twoPointFiveDAnime).toMutableList(),
+    threeDCG = markWatchedList(threeDCG).toMutableList(),
+    motionAnime = markWatchedList(motionAnime).toMutableList(),
+    twoDAnime = markWatchedList(twoDAnime).toMutableList(),
+    aiGenerated = markWatchedList(aiGenerated).toMutableList(),
+    mmd = markWatchedList(mmd).toMutableList(),
+    cosplay = markWatchedList(cosplay).toMutableList(),
+    watchingNow = markWatchedList(watchingNow).toMutableList(),
+    newAnimeTrailer = markWatchedList(newAnimeTrailer).toMutableList(),
+)

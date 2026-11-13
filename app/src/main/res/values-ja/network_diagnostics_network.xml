@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="network_diagnostics_check_transport">現在のネットワーク種別</string>
+    <string name="network_diagnostics_check_wifi_hotspot">Wi‑Fi / ホットスポット特性</string>
+    <string name="network_diagnostics_transport_wifi">Wi‑Fi</string>
+    <string name="network_diagnostics_transport_cellular">モバイルデータ</string>
+    <string name="network_diagnostics_transport_ethernet">有線ネットワーク</string>
+    <string name="network_diagnostics_transport_vpn">VPN</string>
+    <string name="network_diagnostics_transport_bluetooth">Bluetooth ネットワーク</string>
+    <string name="network_diagnostics_transport_other">その他のネットワーク</string>
+    <string name="network_diagnostics_transport_none">ネットワーク接続なし</string>
+    <string name="network_diagnostics_network_validated">インターネット接続を確認済み</string>
+    <string name="network_diagnostics_network_not_validated">インターネット接続は未確認</string>
+    <string name="network_diagnostics_network_metered">従量制ネットワーク</string>
+    <string name="network_diagnostics_network_unmetered">非従量制ネットワーク</string>
+    <string name="network_diagnostics_hotspot_suspected">スマートフォンのホットスポットの可能性</string>
+    <string name="network_diagnostics_hotspot_router">一般的なスマートフォンホットスポットの特徴は検出されませんでした</string>
+    <string name="network_diagnostics_hotspot_not_wifi">Wi‑Fi ではないため、ホットスポット検出をスキップしました</string>
+    <string name="network_diagnostics_hotspot_gateway">ゲートウェイ：%1$s</string>
+    <string name="network_diagnostics_hotspot_dns">DNS：%1$s</string>
+    <string name="network_diagnostics_hotspot_advice">ホットスポット提供側のプロキシ、プライベート DNS、VPN、通信事業者の遮断が影響する場合があります</string>
+    <string name="network_diagnostics_conclusion_hotspot">スマートフォンのホットスポットの可能性があり、本体サイトに接続できません。提供側のプロキシ、プライベート DNS、VPN、通信事業者、転送経路が原因かもしれません。</string>
+    <string name="network_diagnostics_suggest_hotspot">提案：ホットスポット提供側の VPN／プロキシ／プライベート DNS を無効にするか、別の Wi‑Fi／モバイルデータで比較してください。</string>
+    <string name="network_diagnostics_conclusion_offline">利用可能なネットワーク接続がありません。</string>
+    <string name="network_diagnostics_suggest_connect_network">提案：Wi‑Fi またはモバイルデータに接続して再診断してください。</string>
+    <string name="network_diagnostics_check_network_environment">ネットワークとホットスポット環境</string>
+    <string name="network_diagnostics_conclusion_vpn_blocked">VPN を使用中ですが、本体サイトに接続できません。VPN 出口が Cloudflare に拒否されている、ノード経路が異常、またはプロトコルが妨害されている可能性があります。</string>
+    <string name="network_diagnostics_suggest_vpn">提案：VPN のノードまたはプロトコルを切り替えるか、一時的に VPN を無効にして比較してください。</string>
+    <string name="network_diagnostics_conclusion_network_unvalidated">ネットワーク接続はありますが、Android がインターネット接続を確認できていません。ホットスポットのログインページ、 captive portal、プライベート DNS、上流ネットワークの問題が考えられます。</string>
+    <string name="network_diagnostics_suggest_network_unvalidated">提案：ブラウザでインターネット接続を確認し、ホットスポット認証ページ、プライベート DNS、上流ネットワークを確認してください。</string>
+    <string name="network_diagnostics_conclusion_hosts_tls_blocked">内蔵 Hosts の IP には TCP 接続できますが、本体サイトの HTTPS は失敗します。DNS は回避できているため、TLS/SNI、Cloudflare 経路、または中間ネットワークの遮断が原因です。</string>
+    <string name="network_diagnostics_conclusion_doh_tls_blocked">DoH はドメインを解決できましたが、本体サイトの HTTPS は失敗します。DNS ではなく、TLS/SNI または経路が遮断されています。</string>
+    <string name="network_diagnostics_suggest_tls_blocked">提案：ドメイン変更や Hosts 変更では通常解決しません。ネットワークを切り替える、中間プロキシを無効にする、または利用可能なプロキシを使用してください。</string>
+    <string name="network_diagnostics_conclusion_main_rate_limited">本体サイトが HTTP %1$d を返しました。サーバーまたは Cloudflare によって拒否されています。DNS/TLS 障害ではなく、レート制限、地域制限、出口 IP のリスクの可能性があります。</string>
+    <string name="network_diagnostics_suggest_main_rate_limited">提案：数分待つ、ネットワークを切り替える、または利用可能なプロキシノードを変更して再試行してください。</string>
+    <string name="network_diagnostics_conclusion_main_server_error">本体サイトが HTTP %1$d を返しました。サーバーまたは Cloudflare に現在問題があります。</string>
+    <string name="network_diagnostics_suggest_main_server_error">提案：しばらくしてから再試行し、サイトの稼働状況を確認してください。</string>
+    <string name="network_diagnostics_conclusion_main_http_error">本体サイトが HTTP %1$d を返しました。サーバーには到達していますが、トップページの応答が異常です。</string>
+</resources>

@@ -9,23 +9,30 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.yenaly.han1meviewer.APP_NAME
+import com.yenaly.han1meviewer.HCacheManager
 import com.yenaly.han1meviewer.HFileManager.DEF_VIDEO_COVER_TYPE
 import com.yenaly.han1meviewer.HFileManager.HANIME_DOWNLOAD_FOLDER
 import com.yenaly.han1meviewer.HFileManager.createVideoCoverName
 import com.yenaly.han1meviewer.HFileManager.getAppDownloadFolder
 import com.yenaly.han1meviewer.HFileManager.getDownloadVideoCoverFile
 import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.dao.download.HanimeDownloadDao
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
+import com.yenaly.han1meviewer.logic.model.DiscoveredHanimeDownload
+import com.yenaly.han1meviewer.logic.model.LocalMediaDiscoveryResult
 import com.yenaly.han1meviewer.logic.state.DownloadState
+import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.OutputStream
 
 /**
@@ -53,6 +60,7 @@ object SafFileManager {
     const val KEY_TREE_URI = "saf_download_path"
     private val VIDEO_EXTENSIONS = setOf("mp4", "mkv", "avi", "flv", "mov", "webm")
     private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp")
+    private val QUALITY_PATTERN = """_(\d+P)\.[^.]+$""".toRegex(RegexOption.IGNORE_CASE)
 
     private fun isSafReady(): Boolean = !Preferences.safDownloadPath.isNullOrBlank()
     fun buildOpenDirectoryIntent(): Intent {
@@ -76,6 +84,11 @@ object SafFileManager {
         Preferences.preferenceSp.edit {
             putString(KEY_TREE_URI, treeUri.toString())
         }
+        // Create the app-specific directory and hide it before the first video is written.
+        val tree = DocumentFile.fromTreeUri(context, treeUri)
+        val appDir = tree?.findFile(HANIME_DOWNLOAD_FOLDER)
+            ?: tree?.createDirectory(HANIME_DOWNLOAD_FOLDER)
+        appDir?.ensureNoMedia()
     }
 
     /**
@@ -93,8 +106,6 @@ object SafFileManager {
      *
      * 1. 检查SAF是否已初始化（已授权URI）
      * 2. 从Preferences获取保存的URI并验证有效性
-     * 3. 确保目录存在.nomedia文件
-     *
      * @return 有效的下载目录DocumentFile对象，若未准备就绪或URI无效则返回null
      */
     fun getAppDownloadFolderSaf(context: Context): DocumentFile? {
@@ -102,7 +113,6 @@ object SafFileManager {
         val uri = runCatching { Preferences.safDownloadPath?.toUri() }.getOrNull() ?: return null
         val tree = DocumentFile.fromTreeUri(context, uri) ?: return null
         if (!tree.isDirectory) return null
-        tree.ensureNoMedia()
         return tree
     }
 
@@ -118,6 +128,7 @@ object SafFileManager {
     fun getDownloadVideoFolderSaf(context: Context, videoCode: String): DocumentFile? {
         val root = getAppDownloadFolderSaf(context) ?: return null
         val hanime = root.ensureChildDir(HANIME_DOWNLOAD_FOLDER) ?: return null
+        hanime.ensureNoMedia()
         val videoDir = hanime.ensureChildDir(videoCode) ?: return null
         videoDir.ensureNoMedia()
         return videoDir
@@ -191,6 +202,20 @@ object SafFileManager {
         }
     }
 
+    /** 仅查找已存在的 SAF 文件，不会创建空文件。 */
+    fun findDownloadVideoFileUri(
+        context: Context,
+        videoCode: String,
+        fileName: String,
+    ): Uri? {
+        if (!isSafReady()) return null
+        val treeUri = Preferences.safDownloadPath?.toUri() ?: return null
+        val docTree = DocumentFile.fromTreeUri(context, treeUri) ?: return null
+        val rootDir = docTree.findFile(HANIME_DOWNLOAD_FOLDER) ?: return null
+        val videoDir = rootDir.findFile(videoCode) ?: return null
+        return videoDir.findFile(fileName)?.uri
+    }
+
     /**
      * 获取视频文件的Uri（适用于SAF存储）
      *
@@ -205,15 +230,7 @@ object SafFileManager {
         videoCode: String,
         fileName: String
     ): Uri? {
-        if (!isSafReady()) return null
-        val treeUri = Preferences.safDownloadPath?.toUri() ?: return null
-        val docTree = DocumentFile.fromTreeUri(context, treeUri) ?: return null
-        val rootDir = docTree.findFile(HANIME_DOWNLOAD_FOLDER)
-            ?: docTree.createDirectory(HANIME_DOWNLOAD_FOLDER)
-            ?: return null
-        val videoDir = rootDir.findFile(videoCode)
-            ?: rootDir.createDirectory(videoCode)
-            ?: return null
+        val videoDir = getDownloadVideoFolderSaf(context, videoCode) ?: return null
         val ext = fileName.substringAfterLast('.', "")
         val mimeType = mimeForExt(ext)
         val target = videoDir.findFile(fileName)
@@ -290,6 +307,7 @@ object SafFileManager {
             Log.e("Migrate", "创建/获取 HANIME_DOWNLOAD_FOLDER 失败")
             return@launch
         }
+        hanimeDownloadDoc.ensureNoMedia()
 
         val folders = hanimeDownloadFolder.listFiles { it.isDirectory } ?: arrayOf()
         val total = folders.size
@@ -302,17 +320,22 @@ object SafFileManager {
 
             // 检查目标文件夹是否已存在
             var folderDoc = hanimeDownloadDoc.findFile(folder.name)
+            val folderExisted = folderDoc != null
 
             if (folderDoc == null) {
                 folderDoc = hanimeDownloadDoc.createDirectory(folder.name)
-                if (folderDoc == null) {
-                    Log.e("Migrate", "创建视频文件夹失败: ${folder.name}")
-                    continue
-                }
-            } else {
+            }
+            val targetFolder = folderDoc
+            if (targetFolder == null) {
+                Log.e("Migrate", "创建视频文件夹失败: ${folder.name}")
+                continue
+            }
+            targetFolder.ensureNoMedia()
+
+            if (folderExisted) {
                 folder.listFiles()?.forEach { file ->
                     if (file.isFile) {
-                        val existingFile = folderDoc.findFile(file.name)
+                        val existingFile = targetFolder.findFile(file.name)
                         if (existingFile != null) {
                             existingFile.delete()
                             Log.d("Migrate", "删除冲突文件: ${file.name}")
@@ -321,25 +344,33 @@ object SafFileManager {
                 }
             }
 
-            folder.listFiles()?.forEach { file ->
+            val sourceFiles = folder.listFiles()
+            var folderMigrationSucceeded = sourceFiles != null
+            sourceFiles?.forEach { file ->
                 if (file.isFile) {
-                    if (folderDoc.findFile(file.name) == null) {
+                    if (targetFolder.findFile(file.name) == null) {
                         val mimeType = mimeForExt(file.extension.lowercase())
-                        val newFile = folderDoc.createFile(mimeType, file.name)
+                        val newFile = targetFolder.createFile(mimeType, file.name)
                         if (newFile == null) {
+                            folderMigrationSucceeded = false
                             Log.e("Migrate", "创建文件失败: ${file.name}")
                             return@forEach
                         }
 
                         try {
-                            file.inputStream().use { input ->
-                                context.contentResolver.openOutputStream(newFile.uri)
-                                    ?.use { output ->
-                                        input.copyTo(output)
-                                    }
+                            val sourceLength = file.length()
+                            val copiedBytes = file.inputStream().use { input ->
+                                context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
+                                    input.copyTo(output)
+                                } ?: throw IOException("无法打开目标文件输出流: ${newFile.uri}")
+                            }
+                            if (copiedBytes != sourceLength) {
+                                throw IOException("复制长度不一致: $copiedBytes/$sourceLength")
                             }
                             Log.d("Migrate", "已迁移文件: ${file.name}")
                         } catch (e: Exception) {
+                            folderMigrationSucceeded = false
+                            runCatching { newFile.delete() }
                             Log.e("Migrate", "复制文件出错: ${file.name}", e)
                         }
                     } else {
@@ -348,8 +379,12 @@ object SafFileManager {
                 }
             }
 
-            // 删除原始文件夹及文件
-            folder.deleteRecursively()
+            // 只有当前文件夹全部复制成功后才删除源文件，失败时保留私有副本。
+            if (folderMigrationSucceeded) {
+                folder.deleteRecursively()
+            } else {
+                Log.w("Migrate", "迁移失败，已保留原文件夹: ${folder.name}")
+            }
 
             migrated++
             Log.d("Migrate", "已完成文件夹: ${folder.name} ($migrated/$total)")
@@ -371,141 +406,167 @@ object SafFileManager {
         Log.d("Migrate", "迁移完成，总文件夹数: $total")
     }
 
-    enum class ImportFailureReason {
-        INVALID_FOLDER_NAME,
-        MISSING_INFO_JSON,
-        IMPORT_EXCEPTION,
-    }
-
-    data class ImportFailure(
-        val name: String,
-        val reason: ImportFailureReason,
-    )
-
-    data class ImportResult(
-        val successCount: Int = 0,
-        val failures: List<ImportFailure> = emptyList(),
-    ) {
-        val failureCount get() = failures.size
-    }
-
     /**
-     * 扫描自定义目录中的所有符合规则的视频文件夹并导入数据库
-     * @param context Context
-     * @param dao 用于升级数据库中文件uri路径
+     * 兼容旧调用：扫描并直接导入授权目录中的视频。
      */
     suspend fun scanAndImportHanimeDownloads(
         context: Context,
         dao: HanimeDownloadDao,
-        onProgress: ((imported: Int, total: Int, currentName: String?) -> Unit)? = null,
-    ): ImportResult {
-        val treeUri = Preferences.safDownloadPath?.toUri() ?: return ImportResult()
-        val rootDocFile = DocumentFile.fromTreeUri(context, treeUri) ?: return ImportResult()
-        val hanimeDownloadDoc = rootDocFile.findFile(HANIME_DOWNLOAD_FOLDER) ?: return ImportResult()
+    ) {
+        val result = discoverHanimeDownloads(
+            context = context,
+            dao = dao,
+            fetchMissingMetadata = true,
+        )
+        importDiscoveredHanimeDownloads(dao, result)
+    }
 
-        val folders = hanimeDownloadDoc.listFiles().filter { it.isDirectory }
-        val total = folders.size
-        val failures = mutableListOf<ImportFailure>()
-        var successCount = 0
+    /**
+     * 扫描授权目录并返回待导入、已移动和缺失的视频，不修改下载数据库。
+     *
+     * @param fetchMissingMetadata 仅手动导入时允许联网补全旧下载的 info.json；
+     *                             自动发现固定传 false，避免后台批量请求网络。
+     */
+    suspend fun discoverHanimeDownloads(
+        context: Context,
+        dao: HanimeDownloadDao,
+        fetchMissingMetadata: Boolean = false,
+    ): LocalMediaDiscoveryResult = withContext(Dispatchers.IO) {
+        val treeUri = Preferences.safDownloadPath?.toUri() ?: return@withContext LocalMediaDiscoveryResult()
+        val rootDocFile = DocumentFile.fromTreeUri(context, treeUri)
+            ?: return@withContext LocalMediaDiscoveryResult()
+        val hanimeDownloadDoc = rootDocFile.findFile(HANIME_DOWNLOAD_FOLDER)
+            ?: return@withContext LocalMediaDiscoveryResult()
 
-        folders.forEachIndexed { index, folderDoc ->
-            var currentName: String? = folderDoc.name
-            var failure: ImportFailure? = null
+        val existingByCode = dao.getAll().associateBy { it.videoCode }
+        val discovered = mutableListOf<DiscoveredHanimeDownload>()
+        var skippedCount = 0
+
+        for (folderDoc in hanimeDownloadDoc.listFiles().filter { it.isDirectory }) {
+            val videoCode = folderDoc.name ?: continue
             try {
-                val videoCode = folderDoc.name
-                if (videoCode.isNullOrBlank()) {
-                    failure = ImportFailure(
-                        folderDoc.uri?.lastPathSegment ?: "?",
-                        ImportFailureReason.INVALID_FOLDER_NAME,
-                    )
-                } else {
-                    try {
-                        val infoFile = folderDoc.findFile("info.json")
-                        if (infoFile == null) {
-                            failure = ImportFailure(videoCode, ImportFailureReason.MISSING_INFO_JSON)
-                        } else {
-                            val inputStream = context.contentResolver.openInputStream(infoFile.uri)
-                            if (inputStream == null) {
-                                failure = ImportFailure(videoCode, ImportFailureReason.MISSING_INFO_JSON)
-                            } else {
-                                inputStream.use { input ->
-                                    val json = input.bufferedReader().use { it.readText() }
-                                    val jsonObj =
-                                        kotlinx.serialization.json.Json.parseToJsonElement(json).jsonObject
+                val videoFile = folderDoc.listFiles()
+                    .firstOrNull { file ->
+                        file.isFile && file.name?.substringAfterLast('.', "")
+                            ?.lowercase() in VIDEO_EXTENSIONS
+                    }
+                if (videoFile == null) {
+                    skippedCount++
+                    continue
+                }
 
-                                    val title = jsonObj["title"]?.jsonPrimitive?.content ?: ""
-                                    val coverUrl = jsonObj["coverUrl"]?.jsonPrimitive?.content ?: ""
-                                    val addDate = System.currentTimeMillis()
-                                    val videoUrls = jsonObj["videoUrls"]?.jsonObject
-
-                                    // 获取视频文件的 DocumentFile
-                                    val videoFile = folderDoc.listFiles()
-                                        .firstOrNull { file ->
-                                            file.isFile && file.name?.substringAfterLast('.', "")
-                                                ?.lowercase() in VIDEO_EXTENSIONS
-                                        }
-                                    val pattern = """_(\d+P)\.mp4$""".toRegex()
-                                    val quality = pattern.find(videoFile?.name.toString())?.groupValues?.get(1)
-                                        ?: "unknow"
-                                    val videoUrl = videoUrls?.get(quality)
-                                        ?.jsonObject
-                                        ?.get("link")
-                                        ?.jsonPrimitive
-                                        ?.content
-
-                                    // 获取封面文件的 DocumentFile
-                                    val coverFile = folderDoc.listFiles()
-                                        .firstOrNull { file ->
-                                            file.isFile && file.name?.substringAfterLast('.', "")
-                                                ?.lowercase() in IMAGE_EXTENSIONS
-                                        }
-
-                                    val videoUri = videoFile?.uri?.toString() ?: ""
-                                    val coverUri = coverFile?.uri?.toString()
-                                    val videoLength = videoFile?.length() ?: 0L
-                                    currentName = videoFile?.name ?: videoCode
-                                    val existing = dao.find(videoCode)
-                                    if (existing != null) {
-                                        val updated = existing.copy(
-                                            videoUri = videoUri,
-                                            coverUri = coverUri,
-                                            length = videoLength,
-                                            //                               quality = quality
-                                        )
-                                        dao.update(updated)
-                                        Log.d("ImportHanime", "已存在，更新 videoUri/coverUri: $videoCode, length:$videoLength")
-                                    } else {
-                                        val entity = HanimeDownloadEntity(
-                                            coverUrl = coverUrl,
-                                            coverUri = coverUri,
-                                            title = title,
-                                            addDate = addDate,
-                                            videoCode = videoCode,
-                                            videoUri = videoUri,
-                                            quality = quality,
-                                            videoUrl = videoUrl.toString(),
-                                            length = videoLength,
-                                            downloadedLength = 0L,
-                                            state = DownloadState.Finished
-                                        )
-                                        dao.insert(entity)
-                                        Log.d("ImportHanime", "导入完成: $videoCode, length:$videoLength")
-                                    }
-                                    successCount++
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        failure = ImportFailure(videoCode, ImportFailureReason.IMPORT_EXCEPTION)
-                        Log.e("ImportHanime", "导入失败: $videoCode", e)
+                val embedded = EmbeddedVideoMetadata.read(context, videoFile.uri)
+                var infoFile = if (embedded == null) folderDoc.findFile("info.json") else null
+                if (embedded == null && infoFile == null && fetchMissingMetadata) {
+                    if (updateMetadata(context, videoCode, folderDoc.uri)) {
+                        infoFile = folderDoc.findFile("info.json")
                     }
                 }
-            } finally {
-                failure?.let { failures.add(it) }
-                onProgress?.invoke(index + 1, total, currentName)
+
+                val json = embedded?.infoJson ?: infoFile?.let { file ->
+                    context.contentResolver.openInputStream(file.uri)?.use { input ->
+                        input.bufferedReader().use { it.readText() }
+                    }
+                }
+                if (json.isNullOrBlank()) {
+                    skippedCount++
+                    continue
+                }
+
+                val jsonObj = kotlinx.serialization.json.Json
+                    .parseToJsonElement(json)
+                    .jsonObject
+
+                val title = jsonObj["title"]?.jsonPrimitive?.content.orEmpty()
+                val coverUrl = jsonObj["coverUrl"]?.jsonPrimitive?.content.orEmpty()
+                val videoUrls = jsonObj["videoUrls"]?.jsonObject
+                val quality = QUALITY_PATTERN.find(videoFile.name.orEmpty())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?: "unknow"
+                val videoUrl = videoUrls?.get(quality)
+                    ?.jsonObject
+                    ?.get("link")
+                    ?.jsonPrimitive
+                    ?.content
+
+                val coverFile = folderDoc.listFiles()
+                    .firstOrNull { file ->
+                        file.isFile && file.name?.substringAfterLast('.', "")
+                            ?.lowercase() in IMAGE_EXTENSIONS
+                    }
+                val coverUri = embedded?.coverBytes?.let {
+                    EmbeddedVideoMetadata.cacheCover(context, videoCode, it)
+                } ?: coverFile?.uri?.toString()
+
+                discovered += DiscoveredHanimeDownload(
+                    videoCode = videoCode,
+                    title = title.ifBlank { videoCode },
+                    coverUrl = coverUrl,
+                    coverUri = coverUri,
+                    videoUri = videoFile.uri.toString(),
+                    quality = quality,
+                    videoUrl = videoUrl,
+                )
+            } catch (e: Exception) {
+                skippedCount++
+                Log.e("ImportHanime", "发现本地视频失败: " + videoCode, e)
             }
         }
-        return ImportResult(successCount, failures)
+
+        val discoveredByCode = discovered.associateBy { it.videoCode }
+        val newItems = discovered.filter { it.videoCode !in existingByCode }
+        val movedItems = discovered.filter { item ->
+            val existing = existingByCode[item.videoCode] ?: return@filter false
+            existing.videoUri != item.videoUri || existing.coverUri != item.coverUri
+        }
+        val missingCodes = existingByCode.values
+            .filter { it.isDownloaded && it.videoCode !in discoveredByCode }
+            .map { it.videoCode }
+
+        LocalMediaDiscoveryResult(
+            newItems = newItems,
+            movedItems = movedItems,
+            missingVideoCodes = missingCodes,
+            skippedCount = skippedCount,
+        )
+    }
+
+    /**
+     * 将用户确认后的发现结果写入下载数据库。
+     */
+    suspend fun importDiscoveredHanimeDownloads(
+        dao: HanimeDownloadDao,
+        result: LocalMediaDiscoveryResult,
+    ) = withContext(Dispatchers.IO) {
+        result.newItems.forEach { item ->
+            val entity = HanimeDownloadEntity(
+                coverUrl = item.coverUrl,
+                coverUri = item.coverUri,
+                title = item.title,
+                addDate = System.currentTimeMillis(),
+                videoCode = item.videoCode,
+                videoUri = item.videoUri,
+                quality = item.quality,
+                videoUrl = item.videoUrl.orEmpty(),
+                length = 0L,
+                downloadedLength = 0L,
+                state = DownloadState.Finished,
+            )
+            dao.insert(entity)
+            Log.d("ImportHanime", "自动发现并导入: " + item.videoCode)
+        }
+
+        result.movedItems.forEach { item ->
+            val existing = dao.find(item.videoCode) ?: return@forEach
+            dao.update(
+                existing.copy(
+                    videoUri = item.videoUri,
+                    coverUri = item.coverUri,
+                )
+            )
+            Log.d("ImportHanime", "更新已移动视频路径: " + item.videoCode)
+        }
     }
 
     /**
@@ -532,18 +593,29 @@ object SafFileManager {
 
     /**
      * 升级缺少的元数据文件info.json
+     *
+     * 通过 videoCode 从网络获取视频信息并写入 info.json，
+     * 用于把缺少元数据的旧下载目录补全为可导入状态。
+     *
      * @param context context
      * @param videoCode 视频id
      * @param uri 视频目录
      * @return true 表示创建成功
      */
-    fun updateMetadata(
+    suspend fun updateMetadata(
         context: Context,
         videoCode: String,
         uri: Uri
     ): Boolean {
-        //TODO 在做了在做了
-        return true
+        return try {
+            val state = NetworkRepo.getHanimeVideo(videoCode).first()
+            val info = (state as? VideoLoadingState.Success)?.info ?: return false
+            HCacheManager.saveHanimeVideoInfo(context, videoCode, info)
+            true
+        } catch (e: Exception) {
+            Log.e("SafFileManager", "补全元数据失败: $videoCode", e)
+            false
+        }
     }
 
     /**

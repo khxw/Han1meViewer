@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -77,12 +81,16 @@ fun DailyCheckInContent(
         targetValue = uiState.bestStreakThisMonth, label = "streak"
     )
 
+    // 底部导航栏模式下为悬浮导航栏预留空间，保证内容末尾可滚至导航栏上方
+    val bottomNavReserved = if (Preferences.useBottomNavigation) {
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 112.dp
+    } else 0.dp
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = bottomNavReserved)
             .background(MaterialTheme.colorScheme.background)
     ) {
         TodayCheckInCard(

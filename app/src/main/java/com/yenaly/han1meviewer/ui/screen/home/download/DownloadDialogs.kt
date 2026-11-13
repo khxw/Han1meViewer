@@ -199,7 +199,7 @@ fun GroupRenameDialog(
 ) {
     if (header == null) return
     var name by remember(header.groupKey) { mutableStateOf(header.groupKey) }
-    val group = groups.find { it.id == header.groupId }
+    val group = groups.find { it.name == header.groupKey }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         ElevatedCard(shape = RoundedCornerShape(28.dp)) {
@@ -296,9 +296,6 @@ fun MoveGroupDialog(
                     ) {
                         items(items = groups, key = { it.id }) { group ->
                             ListItem(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onConfirm(video, group.id) },
                                 leadingContent = {
                                     Icon(
                                         imageVector = Icons.Sharp.Create,
@@ -306,15 +303,18 @@ fun MoveGroupDialog(
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 },
-                                colors = ListItemDefaults.colors(
-                                    containerColor = Color.Transparent
-                                ),
-                                content = {
+                                headlineContent = {
                                     Text(
                                         text = group.name,
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 },
+                                colors = ListItemDefaults.colors(
+                                    containerColor = Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onConfirm(video, group.id) }
                             )
                         }
                     }

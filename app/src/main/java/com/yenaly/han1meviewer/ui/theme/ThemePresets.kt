@@ -468,6 +468,23 @@ fun ThemeColorPreset.colorScheme(darkTheme: Boolean): ColorScheme = when (this) 
     ThemeColorPreset.HIGH_CONTRAST -> if (darkTheme) highContrastBlueDark else highContrastBlueLight
 }
 
+/**
+ * AMOLED 純黑主題：在深色色板基礎上將背景與表面色強制為純黑，
+ * 僅保留極輕微的層級差異以區分卡片與彈窗。
+ */
+fun ColorScheme.toAmoled(): ColorScheme = copy(
+    background = Color.Black,
+    surface = Color.Black,
+    surfaceDim = Color.Black,
+    surfaceBright = Color(0xFF141414),
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF0A0A0A),
+    surfaceContainer = Color(0xFF121212),
+    surfaceContainerHigh = Color(0xFF1A1A1A),
+    surfaceContainerHighest = Color(0xFF242424),
+    surfaceVariant = Color(0xFF1F1F1F),
+)
+
 @RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun dynamicColorScheme(darkTheme: Boolean): ColorScheme {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +65,10 @@ fun VideoCommentCard(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = {}, onLongClick = {}),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -129,7 +135,10 @@ fun VideoCommentCard(
                         ),
                         contentDescription = null,
                     )
-                    Text(comment.realLikesCount?.toString().orEmpty())
+                    // 有人点过赞才显示数字；0 不显示
+                    comment.realLikesCount?.takeIf { it > 0 }?.let {
+                        Text(it.toString())
+                    }
                 }
 
                 TextButton(onClick = onThumbDown, colors = ButtonDefaults.textButtonColors()) {
@@ -143,6 +152,10 @@ fun VideoCommentCard(
                         ),
                         contentDescription = null,
                     )
+                    // 有人点过踩才显示数字；0 不显示
+                    comment.realDislikesCount?.takeIf { it > 0 }?.let {
+                        Text(it.toString())
+                    }
                 }
 
                 TextButton(onClick = onReply) {
@@ -156,7 +169,7 @@ fun VideoCommentCard(
 
             if (comment.hasMoreReplies && onViewMoreReplies != null) {
                 TextButton(onClick = onViewMoreReplies) {
-                    Text(stringResource(R.string.view_more_replies, comment.replyCount ?: 0))
+                    Text(pluralStringResource(R.plurals.view_more_replies, comment.replyCount ?: 0, comment.replyCount ?: 0))
                 }
             }
         }
@@ -172,6 +185,7 @@ private fun VideoCommentCardPreview() {
         date = "2小時前",
         content = "這是一條用於預覽的評論內容，用來確認 Compose 卡片樣式是否接近原版 item_video_comment.xml。",
         thumbUp = 12,
+        thumbDown = 2,
         isChildComment = false,
         hasMoreReplies = true,
         replyCount = 3,

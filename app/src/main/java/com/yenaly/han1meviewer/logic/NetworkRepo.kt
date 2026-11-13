@@ -2,7 +2,6 @@ package com.yenaly.han1meviewer.logic
 
 import android.util.Log
 import com.yenaly.han1meviewer.EMPTY_STRING
-import com.yenaly.han1meviewer.NEW_ANIME_PREVIEW_GENRE
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.Preferences.isAlreadyLogin
 import com.yenaly.han1meviewer.R
@@ -12,7 +11,6 @@ import com.yenaly.han1meviewer.logic.exception.IPBlockedException
 import com.yenaly.han1meviewer.logic.exception.ParseException
 import com.yenaly.han1meviewer.logic.model.CommentPlace
 import com.yenaly.han1meviewer.logic.model.CreatorSort
-import com.yenaly.han1meviewer.logic.model.HanimePreview
 import com.yenaly.han1meviewer.logic.model.ModifiedPlaylistArgs
 import com.yenaly.han1meviewer.logic.model.MyListType
 import com.yenaly.han1meviewer.logic.model.OnlineWatchHistorySort
@@ -23,8 +21,7 @@ import com.yenaly.han1meviewer.logic.network.HanimeNetwork
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
-import com.yenaly.han1meviewer.replaceBackupMediaCdnHost
-import com.yenaly.han1meviewer.util.applicationContext
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.catch
@@ -79,32 +76,6 @@ object NetworkRepo {
         action = Parser::hanimePreview
     )
 
-    /**
-     * 從「新番預告」搜索結果加載預覽數據。
-     *
-     * 網站已把新番預告遷移到 `search?page=1&genre=新番預告`，
-     * 這裡直接使用搜索結果首頁的影片列表，並轉換成原有的 [HanimePreview] 模型。
-     */
-    fun getHanimePreviewFromSearch() = flow<WebsiteState<HanimePreview>> {
-        val requestResult = HanimeNetwork.hanimeService.getHanimeSearchResult(
-            page = 1,
-            genre = NEW_ANIME_PREVIEW_GENRE,
-        )
-        val resultBody = requestResult.body()?.string()?.replaceBackupMediaCdnHost()
-        if (!requestResult.isSuccessful || resultBody == null) {
-            requestResult.throwRequestException()
-        }
-        val list = when (val state = Parser.hanimeSearch(resultBody)) {
-            is PageLoadingState.Success -> state.info.list
-            is PageLoadingState.NoMoreData -> emptyList()
-            is PageLoadingState.Error -> throw state.throwable
-            PageLoadingState.Loading -> emptyList()
-        }
-        emit(WebsiteState.Success(Parser.hanimePreviewFromSearch(list)))
-    }.catch { e ->
-        emit(WebsiteState.Error(handleException(e)))
-    }.flowOn(Dispatchers.IO)
-
     //获取订阅或者可以说是关注列表及它们的更新
     fun getMySubscriptions(page: Int) = websiteIOFlow(
         request = { HanimeNetwork.hanimeService.getMySubscriptions(page) },
@@ -150,7 +121,7 @@ object NetworkRepo {
 
     fun getUserAccountPage(userId: String) = websiteIOFlow(
         request = { HanimeNetwork.myListService.getUserAccountPage(userId) },
-        action = Parser::userAccountPage,
+        action = { Parser.userAccountPage(it, userId) },
     )
 
     fun getUploadedVideos(
@@ -179,12 +150,14 @@ object NetworkRepo {
         userId: String,
         csrfToken: String?,
         name: String,
+        email: String,
     ) = websiteIOFlow(
         request = {
             HanimeNetwork.myListService.updateUserAccountProfile(
                 userId = userId,
                 csrfToken = csrfToken,
                 name = name,
+                email = email,
             )
         },
         permittedSuccessCode = intArrayOf(302),
@@ -192,7 +165,7 @@ object NetworkRepo {
         if (it.isBlank()) {
             WebsiteState.Success(Unit)
         } else {
-            when (val result = Parser.userAccountPage(it)) {
+            when (val result = Parser.userAccountPage(it, userId)) {
                 is WebsiteState.Error -> WebsiteState.Error(result.throwable)
                 else -> WebsiteState.Success(Unit)
             }
@@ -220,7 +193,7 @@ object NetworkRepo {
         if (it.isBlank()) {
             WebsiteState.Success(Unit)
         } else {
-            when (val result = Parser.userAccountPage(it)) {
+            when (val result = Parser.userAccountPage(it, userId)) {
                 is WebsiteState.Error -> WebsiteState.Error(result.throwable)
                 else -> WebsiteState.Success(Unit)
             }
@@ -252,7 +225,7 @@ object NetworkRepo {
         if (it.isBlank()) {
             WebsiteState.Success(Unit)
         } else {
-            when (val result = Parser.userAccountPage(it)) {
+            when (val result = Parser.userAccountPage(it, userId)) {
                 is WebsiteState.Error -> WebsiteState.Error(result.throwable)
                 else -> WebsiteState.Success(Unit)
             }
@@ -281,24 +254,37 @@ object NetworkRepo {
     }
 
     fun deleteMyListItems(
-        itemId: String,
+        typeOrCode: Any,
+        videoCode: String,
         position: Int,
         token: String?,
     ) = websiteIOFlow(
         request = {
-            HanimeNetwork.myListService.deleteMyListItems(
-                itemId = itemId,
-                csrfToken = token
-            )
-        },
+            when (typeOrCode) {
+                is String ->
+                    HanimeNetwork.myListService.deleteMyListItems(
+                        typeOrCode, videoCode,
+                        csrfToken = token
+                    )
+
+                is MyListType ->
+                    HanimeNetwork.myListService.deleteMyListItems(
+                        typeOrCode.value, videoCode,
+                        csrfToken = token
+                    )
+
+                else ->
+                    throw IllegalArgumentException("typeOrId must be String or MyListType")
+            }
+        }
     ) { deleteBody ->
         val jsonObject = JSONObject(deleteBody)
-        val success = jsonObject.optBoolean("success", false)
-        if (success) {
-            WebsiteState.Success(position)
-        } else {
-            WebsiteState.Error(IllegalStateException("cannot delete it ?!"))
+        val returnVideoCode = jsonObject.get("video_id").toString()
+        if (videoCode == returnVideoCode) {
+            return@websiteIOFlow WebsiteState.Success(position)
         }
+
+        return@websiteIOFlow WebsiteState.Error(IllegalStateException("cannot delete it ?!"))
     }
 
     fun getPlaylists(page: Int, userId: String ) = websiteIOFlow(
@@ -371,6 +357,7 @@ object NetworkRepo {
         listCode: String,
         videoCode: String,
         isChecked: Boolean,
+        position: Int,
         csrfToken: String?,
     ) = websiteIOFlow(
         request = {
@@ -380,7 +367,7 @@ object NetworkRepo {
         }
     ) {
         Log.d("add_to_playlist_body", it)
-        return@websiteIOFlow WebsiteState.Success(Unit)
+        return@websiteIOFlow WebsiteState.Success(position)
     }
 
     fun modifyPlaylist(
@@ -582,7 +569,7 @@ object NetworkRepo {
         action: (String) -> WebsiteState<T>,
     ) = flow {
         val requestResult = request.invoke()
-        val resultBody = requestResult.body()?.string()?.replaceBackupMediaCdnHost()
+        val resultBody = requestResult.body()?.string()
         val permitted = permittedSuccessCode?.contains(requestResult.code()) == true
         if ((permitted || requestResult.isSuccessful)) {
             emit(action.invoke(resultBody ?: EMPTY_STRING))
@@ -601,7 +588,7 @@ object NetworkRepo {
         action: (String) -> PageLoadingState<T>,
     ) = flow {
         val requestResult = request.invoke()
-        val resultBody = requestResult.body()?.string()?.replaceBackupMediaCdnHost()
+        val resultBody = requestResult.body()?.string()
         if (requestResult.isSuccessful && resultBody != null) {
             emit(action.invoke(resultBody))
         } else {
@@ -619,7 +606,7 @@ object NetworkRepo {
         action: (String) -> VideoLoadingState<T>,
     ) = flow {
         val requestResult = request.invoke()
-        val resultBody = requestResult.body()?.string()?.replaceBackupMediaCdnHost()
+        val resultBody = requestResult.body()?.string()
         if (requestResult.isSuccessful && resultBody != null) {
             emit(action.invoke(resultBody))
         } else {
@@ -632,6 +619,7 @@ object NetworkRepo {
     internal fun Response<ResponseBody>.throwRequestException(): Nothing {
         val body = errorBody()?.string()
         when (val code = code()) {
+            429 -> throw IPBlockedException(getString(R.string.cloudflare_ip_block_warning))
             403 -> if (!body.isNullOrBlank()) {
                 when {
                     "you have been blocked" in body ->

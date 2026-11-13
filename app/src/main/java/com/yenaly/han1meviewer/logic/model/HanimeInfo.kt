@@ -1,5 +1,7 @@
 package com.yenaly.han1meviewer.logic.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * @project Han1meViewer
  * @author Yenaly Liew
@@ -11,6 +13,7 @@ interface HanimeInfoType : MultiItemEntity
  * @author Yenaly Liew
  * @time 2022/06/08 008 22:56
  */
+@Serializable
 data class HanimeInfo(
     override val title: String,
     override val coverUrl: String,
@@ -22,7 +25,7 @@ data class HanimeInfo(
 
     val isPlaying: Boolean = false, // for video playlist only.
 
-    val playlistItemId: String? = null,
+    val tags: List<String> = emptyList(),
 
     override var itemType: Int,
     override val reviews: String? = "",

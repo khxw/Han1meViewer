@@ -1,6 +1,12 @@
 package com.yenaly.han1meviewer.ui.screen.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -12,8 +18,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -23,17 +31,22 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -53,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,11 +81,12 @@ import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.OnlineWatchHistorySort
 import com.yenaly.han1meviewer.logic.state.PageLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
+import com.yenaly.han1meviewer.ui.component.BottomNavAwareSnackbarHost
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
 import com.yenaly.han1meviewer.ui.component.LoadMoreFooter
 import com.yenaly.han1meviewer.ui.component.PageContent
-import com.yenaly.han1meviewer.ui.component.PaginationPager
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
+import com.yenaly.han1meviewer.ui.component.bottomNavReservedSpacing
 import com.yenaly.han1meviewer.ui.component.appbar.HanimeScaffold
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
@@ -80,6 +95,7 @@ import com.yenaly.han1meviewer.ui.component.lazy.LazyVerticalGrid
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import com.yenaly.han1meviewer.ui.screen.rememberVideoGridColumns
+import com.yenaly.han1meviewer.ui.screen.videoGridSpacing
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
@@ -97,7 +113,6 @@ fun WatchHistoryTabScreen(
     onlineState: StateFlow<PageLoadingState<*>>,
     onlineSort: StateFlow<OnlineWatchHistorySort>,
     onlineLoadedPageCount: StateFlow<Int>,
-    onlineTotalPages: StateFlow<Int>,
     onlineIsLoadingMore: StateFlow<Boolean>,
     onlineRefreshing: () -> Boolean,
     onlineDeleteStateFlow: SharedFlow<WebsiteState<Boolean>>,
@@ -109,7 +124,6 @@ fun WatchHistoryTabScreen(
     onDeleteOnlineVideo: (HanimeInfo) -> Unit,
     onRefreshOnline: (OnlineWatchHistorySort) -> Unit,
     onLoadMoreOnline: () -> Unit,
-    onGoToPageOnline: (Int) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 2 })
@@ -118,7 +132,6 @@ fun WatchHistoryTabScreen(
     val currentOnlineState by onlineState.collectAsState()
     val currentOnlineSort by onlineSort.collectAsState()
     val currentOnlineLoadedPageCount by onlineLoadedPageCount.collectAsState()
-    val currentOnlineTotalPages by onlineTotalPages.collectAsState()
     val currentOnlineIsLoadingMore by onlineIsLoadingMore.collectAsState()
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteAllLocalDialog by rememberSaveable { mutableStateOf(false) }
@@ -220,7 +233,6 @@ fun WatchHistoryTabScreen(
                         state = currentOnlineState,
                         sort = currentOnlineSort,
                         loadedPageCount = currentOnlineLoadedPageCount,
-                        totalPages = currentOnlineTotalPages,
                         isLoadingMore = currentOnlineIsLoadingMore,
                         refreshing = onlineRefreshing(),
                         deleteStateFlow = onlineDeleteStateFlow,
@@ -228,7 +240,6 @@ fun WatchHistoryTabScreen(
                         onDeleteVideo = onDeleteOnlineVideo,
                         onRefresh = onRefreshOnline,
                         onLoadMore = onLoadMoreOnline,
-                        onGoToPage = onGoToPageOnline,
                     )
                 }
             }
@@ -275,6 +286,14 @@ private fun WatchHistoryScreen(
     var showDeleteAllDialog by rememberSaveable { mutableStateOf(false) }
     var showHelpDialog by rememberSaveable { mutableStateOf(false) }
 
+    // 多選批量管理狀態
+    var selectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedIds by rememberSaveable { mutableStateOf(listOf<Int>()) }
+    var showBatchDeleteDialog by rememberSaveable { mutableStateOf(false) }
+
+    // 歷史搜索過濾
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
     ConfirmDialog(
         visible = pendingDelete != null,
         title = stringResource(R.string.delete_history),
@@ -302,6 +321,21 @@ private fun WatchHistoryScreen(
     )
 
     ConfirmDialog(
+        visible = showBatchDeleteDialog,
+        title = stringResource(R.string.delete_history),
+        message = pluralStringResource(R.plurals.sure_to_delete_selected_histories, selectedIds.size, selectedIds.size),
+        confirmText = stringResource(R.string.delete),
+        dismissText = stringResource(R.string.cancel),
+        onConfirm = {
+            histories.filter { it.id in selectedIds }.forEach(onDeleteHistory)
+            selectedIds = emptyList()
+            selectionMode = false
+            showBatchDeleteDialog = false
+        },
+        onDismiss = { showBatchDeleteDialog = false },
+    )
+
+    ConfirmDialog(
         visible = showHelpDialog,
         title = stringResource(R.string.help),
         message = stringResource(R.string.long_press_to_delete_all_histories),
@@ -312,33 +346,134 @@ private fun WatchHistoryScreen(
     )
 
     val content: @Composable (PaddingValues) -> Unit = { paddingValues ->
-        if (histories.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center,
-            ) {
-                EmptyContent(
-                    hint = stringResource(R.string.watch_history_empty_title),
-                    subHint = stringResource(R.string.watch_history_empty_description),
-                )
+        fun toggleHistorySelection(id: Int) {
+            selectedIds = if (id in selectedIds) {
+                selectedIds - id
+            } else {
+                selectedIds + id
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                items(histories, key = { it.id }) { history ->
-                    WatchHistoryCard(
-                        history = history,
-                        onClick = { onOpenVideo(history) },
-                        onLongClick = { pendingDelete = history },
+        }
+
+        val filteredHistories = remember(histories, searchQuery) {
+            val query = searchQuery.trim()
+            if (query.isEmpty()) histories
+            else histories.filter { it.title.contains(query, ignoreCase = true) }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+        ) {
+            if (histories.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    EmptyContent(
+                        hint = stringResource(R.string.watch_history_empty_title),
+                        subHint = stringResource(R.string.watch_history_empty_description),
                     )
                 }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(stringResource(R.string.search_watch_history)) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_baseline_search_24),
+                                contentDescription = null,
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.close),
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+
+                    if (filteredHistories.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EmptyContent(hint = stringResource(R.string.no_matching_history))
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                // 页面显示导航栏时为导航栏预留空间，否则仅让开系统导航条
+                                .padding(bottom = bottomNavReservedSpacing())
+                                .navigationBarsPadding(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            items(filteredHistories, key = { it.id }) { history ->
+                                WatchHistoryCard(
+                                    history = history,
+                                    onClick = {
+                                        if (selectionMode) {
+                                            toggleHistorySelection(history.id)
+                                        } else {
+                                            onOpenVideo(history)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (!selectionMode) {
+                                            selectionMode = true
+                                            selectedIds = listOf(history.id)
+                                        } else {
+                                            toggleHistorySelection(history.id)
+                                        }
+                                    },
+                                    selectionMode = selectionMode,
+                                    selected = history.id in selectedIds,
+                                    onToggleSelect = { toggleHistorySelection(history.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = selectionMode,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = slideInVertically(
+                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                ) { it } + fadeIn(animationSpec = tween(300)),
+                exit = slideOutVertically(
+                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                ) { it } + fadeOut(animationSpec = tween(300)),
+            ) {
+                WatchHistoryBatchActionBar(
+                    selectedCount = selectedIds.size,
+                    totalCount = filteredHistories.size,
+                    onToggleSelectAll = {
+                        selectedIds = if (selectedIds.size == filteredHistories.size) {
+                            emptyList()
+                        } else {
+                            filteredHistories.map { it.id }
+                        }
+                    },
+                    onExitMultiSelect = {
+                        selectionMode = false
+                        selectedIds = emptyList()
+                    },
+                    onDeleteSelected = { showBatchDeleteDialog = true },
+                )
             }
         }
     }
@@ -348,7 +483,7 @@ private fun WatchHistoryScreen(
             title = stringResource(R.string.watch_history),
             subtitle = {
                 Text(
-                    text = stringResource(R.string.watch_history_total_count, histories.size),
+                    text = pluralStringResource(R.plurals.watch_history_total_count, histories.size, histories.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -393,7 +528,6 @@ private fun OnlineWatchHistoryScreen(
     state: PageLoadingState<*>,
     sort: OnlineWatchHistorySort,
     loadedPageCount: Int,
-    totalPages: Int,
     isLoadingMore: Boolean,
     refreshing: Boolean,
     deleteStateFlow: SharedFlow<WebsiteState<Boolean>>,
@@ -401,7 +535,6 @@ private fun OnlineWatchHistoryScreen(
     onDeleteVideo: (HanimeInfo) -> Unit,
     onRefresh: (OnlineWatchHistorySort) -> Unit,
     onLoadMore: () -> Unit,
-    onGoToPage: (Int) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
     val refreshState = rememberPullToRefreshState()
@@ -410,7 +543,6 @@ private fun OnlineWatchHistoryScreen(
     var sortBarVisible by rememberSaveable { mutableStateOf(true) }
     val deleteFailedText = stringResource(R.string.delete_failed)
     val deleteSuccessText = stringResource(R.string.delete_success)
-    val searchPagination = Preferences.searchPagination
 
     LaunchedEffect(deleteStateFlow, deleteFailedText, deleteSuccessText) {
         deleteStateFlow.collect { deleteState ->
@@ -422,8 +554,8 @@ private fun OnlineWatchHistoryScreen(
         }
     }
 
-    LaunchedEffect(gridState.canLoadMore(items, state), isLoadingMore, searchPagination) {
-        if (!searchPagination && gridState.canLoadMore(items, state) && !isLoadingMore) {
+    LaunchedEffect(gridState.canLoadMore(items, state), isLoadingMore) {
+        if (gridState.canLoadMore(items, state) && !isLoadingMore) {
             onLoadMore()
         }
     }
@@ -530,8 +662,6 @@ private fun OnlineWatchHistoryScreen(
                     snackbarHostState = snackbarHostState,
                     onOpenVideo = onOpenVideo,
                     onDeleteVideo = { pendingDelete = it },
-                    totalPages = totalPages,
-                    onGoToPage = onGoToPage,
                 )
             }
         }
@@ -548,24 +678,20 @@ private fun OnlineWatchHistoryGrid(
     snackbarHostState: androidx.compose.material3.SnackbarHostState,
     onOpenVideo: (HanimeInfo) -> Unit,
     onDeleteVideo: (HanimeInfo) -> Unit,
-    totalPages: Int,
-    onGoToPage: (Int) -> Unit,
 ) {
     val videoColumns = rememberVideoGridColumns()
-    val scope = rememberCoroutineScope()
-    val searchPagination = Preferences.searchPagination
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(videoColumns),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(SpacingNormal),
-            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-            verticalArrangement = Arrangement.spacedBy(SpacingNormal),
+            contentPadding = PaddingValues(videoGridSpacing),
+            horizontalArrangement = Arrangement.spacedBy(videoGridSpacing),
+            verticalArrangement = Arrangement.spacedBy(videoGridSpacing),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = stringResource(R.string.watch_history_total_count, items.size),
+                    text = pluralStringResource(R.plurals.watch_history_total_count, items.size, items.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
@@ -574,33 +700,22 @@ private fun OnlineWatchHistoryGrid(
             items(items, key = { it.videoCode }) { item ->
                 VideoCardItem(
                     videoItem = item,
+                    isWatched = true,
                     onClickVideosItem = { onOpenVideo(item) },
                     onLongClickVideosItem = { _, _ -> onDeleteVideo(item) },
                 )
             }
             if (items.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    if (searchPagination) {
-                        PaginationPager(
-                            currentPage = loadedPageCount.coerceAtLeast(1),
-                            totalPages = totalPages,
-                            onPageSelected = { page ->
-                                onGoToPage(page)
-                                scope.launch { gridState.scrollToItem(0) }
-                            },
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                    } else {
-                        LoadMoreFooter(
-                            state = state,
-                            loadedPage = loadedPageCount,
-                            isLoadingMore = isLoadingMore,
-                        )
-                    }
+                    LoadMoreFooter(
+                        state = state,
+                        loadedPage = loadedPageCount,
+                        isLoadingMore = isLoadingMore,
+                    )
                 }
             }
         }
-        androidx.compose.material3.SnackbarHost(
+        BottomNavAwareSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -643,12 +758,104 @@ private fun OnlineHistorySortChip(
     )
 }
 
+/**
+ * 歷史多選批量操作欄
+ */
+@Composable
+private fun WatchHistoryBatchActionBar(
+    selectedCount: Int,
+    totalCount: Int,
+    onToggleSelectAll: () -> Unit,
+    onExitMultiSelect: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isAllSelected = selectedCount == totalCount
+    val hasSelection = selectedCount > 0
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            // 底部导航栏模式下抬升到悬浮导航栏上方
+            .padding(bottom = bottomNavReservedSpacing()),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        shadowElevation = 12.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(onClick = onExitMultiSelect) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.close),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = "$selectedCount/$totalCount",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onToggleSelectAll) {
+                    Text(
+                        text = if (isAllSelected) {
+                            stringResource(R.string.deselect_all)
+                        } else {
+                            stringResource(R.string.select_all)
+                        },
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+                TextButton(
+                    onClick = onDeleteSelected,
+                    enabled = hasSelection,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.delete),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WatchHistoryCard(
     history: WatchHistoryEntity,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onToggleSelect: () -> Unit,
 ) {
     val fixTimestamp = { ts: Long -> if (ts < 9999999999L) ts * 1000 else ts }
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
@@ -661,7 +868,12 @@ private fun WatchHistoryCard(
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .combinedClickable(
+                onClick = {
+                    if (selectionMode) onToggleSelect() else onClick()
+                },
+                onLongClick = onLongClick,
+            ),
         shape = RoundedCornerShape(16.dp),
     ) {
         Row(
@@ -671,6 +883,21 @@ private fun WatchHistoryCard(
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (selectionMode) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_check_circle_24),
+                    contentDescription = null,
+                    tint = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                    },
+                    modifier = Modifier
+                        .size(22.dp)
+                        .align(Alignment.CenterVertically),
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .width(120.dp)
@@ -719,15 +946,17 @@ private fun WatchHistoryCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    FilledIconButton(
-                        onClick = onLongClick,
-                        modifier = Modifier.size(25.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Delete,
-                            contentDescription = stringResource(R.string.delete_history),
-                            modifier = Modifier.size(16.dp)
-                        )
+                    if (!selectionMode) {
+                        FilledIconButton(
+                            onClick = onLongClick,
+                            modifier = Modifier.size(25.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = stringResource(R.string.delete_history),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
                 WatchHistoryMeta(

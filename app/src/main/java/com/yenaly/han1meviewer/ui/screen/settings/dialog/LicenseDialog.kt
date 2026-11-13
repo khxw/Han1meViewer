@@ -70,8 +70,19 @@ fun LicenseDialog(
                         LibrariesContainer(
                             libraries = libraries,
                             modifier = Modifier,
-                            badges = LibraryBadges(description = true, funding = true),
-                            actionLabels = LibraryActionBadges(sourceEnabled = false)
+                            badges = LibraryBadges(
+                                version = true,
+                                author = true,
+                                description = true,
+                                license = true,
+                                funding = true,
+                            ),
+                            actionLabels = LibraryActionBadges(
+                                sourceEnabled = true,
+                                websiteEnabled = true,
+                                sponsorEnabled = true,
+                                licenseEnabled = true,
+                            ),
                         )
                     }
 

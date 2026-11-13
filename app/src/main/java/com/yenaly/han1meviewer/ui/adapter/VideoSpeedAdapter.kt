@@ -8,7 +8,6 @@ import android.widget.TextView
 import com.chad.library.adapter4.BaseQuickAdapter
 import com.chad.library.adapter4.viewholder.QuickViewHolder
 import com.google.android.material.color.MaterialColors
-import com.yenaly.han1meviewer.ui.theme.AppThemeState
 import com.yenaly.han1meviewer.ui.view.video.HJzvdStd
 import androidx.core.graphics.toColorInt
 
@@ -21,12 +20,11 @@ class VideoSpeedAdapter(private var currentIndex: Int) : BaseQuickAdapter<String
     HJzvdStd.speedStringArray.toMutableList()
 ) {
     private val colorPrimary: Int
-        get() = AppThemeState.primaryColorArgb.takeIf { it != 0 }
-            ?: MaterialColors.getColor(
-                context,
-                androidx.appcompat.R.attr.colorPrimary,
-                Color.BLACK
-            )
+        get() = MaterialColors.getColor(
+            context,
+            androidx.appcompat.R.attr.colorPrimary,
+            Color.BLACK
+        )
 
     init {
         isStateViewEnable = true

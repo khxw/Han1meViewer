@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.ui.screen.home.homepage.component
 
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,32 +23,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 渲染首页顶部栏，包含抽屉入口、搜索入口和新番列表入口。
  *
+ * @param onOpenDrawer 点击抽屉按钮时调用。
  * @param onSearchClick 点击搜索框时调用。
  * @param onNavigateToPreview 点击新番按钮时调用。
  * @param modifier 应用于顶部栏根布局的修饰符。
@@ -56,33 +46,18 @@ import kotlin.time.Duration.Companion.milliseconds
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePageTopBar(
+    onOpenDrawer: () -> Unit,
     onSearchClick: () -> Unit,
     onNavigateToPreview: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val placeholders = stringArrayResource(R.array.search_placeholders)
     val randomHint = placeholders.random()
-    val scope = rememberCoroutineScope()
-    var clickCount by remember { mutableIntStateOf(0) }
-    val activity = LocalActivity.current
-    val meow = stringResource(R.string.meow)
-    val hiss = stringResource(R.string.hiss)
-    val growl = stringResource(R.string.growl)
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        modifier = modifier
-            .fillMaxWidth()
-            .drawWithContent {
-                clipRect(
-                    left = 0f,
-                    top = 0f,
-                    right = size.width,
-                    bottom = size.height + 2.dp.toPx()
-                ) {
-                    this@drawWithContent.drawContent()
-            }
-        }
-            .shadow(elevation = 2.dp)
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 1.dp,
+        shadowElevation = 2.dp,
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -91,36 +66,19 @@ fun HomePageTopBar(
                 .statusBarsPadding()
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_baseline_h_chan_single_color),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(horizontal = 1.dp)
-                    .size(50.dp)
-                    .clickable{
-                        clickCount++
-                        when(clickCount){
-                            3 -> {GlobalToasts.show(message = meow, level = GlobalToasts.ToastLevel.INFO)}
-                            6 -> {GlobalToasts.show(message = "$meow $meow", level = GlobalToasts.ToastLevel.SUCCESS)}
-                            9 -> {GlobalToasts.show(message = hiss, level = GlobalToasts.ToastLevel.WARNING)}
-                            12 -> {
-                                GlobalToasts.show(message = growl, level = GlobalToasts.ToastLevel.ERROR)
-                                scope.launch {
-                                    delay(1000.milliseconds)
-                                    activity?.finish()
-                                }
-                            }
-                        }
-
-                    },
-            )
+            IconButton(onClick = onOpenDrawer) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = stringResource(R.string.open_menu),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(28.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
@@ -159,6 +117,7 @@ fun HomePageTopBar(
 private fun HomePageTopBarPreview() {
     ComponentPreview {
         HomePageTopBar(
+            onOpenDrawer = {},
             onSearchClick = {},
             onNavigateToPreview = {}
         )

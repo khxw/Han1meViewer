@@ -1,7 +1,6 @@
 package com.yenaly.han1meviewer.ui.navigation.settings
 
 import android.content.Context
-import android.util.Base64
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -25,13 +24,14 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.ui.component.ConfirmDialog
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.screen.settings.HKeyframeSettingsScreen
 import com.yenaly.han1meviewer.ui.screen.settings.HKeyframeSettingsUiState
 import com.yenaly.han1meviewer.ui.screen.settings.HKeyframesScreen
 import com.yenaly.han1meviewer.ui.screen.settings.SharedHKeyframesScreen
 import com.yenaly.han1meviewer.ui.viewmodel.SettingsViewModel
-import com.yenaly.han1meviewer.util.copyToClipboard
+import com.yenaly.yenaly_libs.utils.copyToClipboard
+import com.yenaly.yenaly_libs.utils.decodeFromStringByBase64
+import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.serialization.json.Json
 
 private const val H_KEYFRAMES_ENABLE = "h_keyframes_enable"
@@ -61,11 +61,6 @@ fun HKeyframesRouteScreen(
         .collectAsStateWithLifecycle(initialValue = emptyList())
     var sharedHKeyframeEntity by remember { mutableStateOf<HKeyframeEntity?>(null) }
 
-    val notDetected = stringResource(R.string.h_keyframes_shared_by_other_not_detected)
-    val modifySuccess = stringResource(R.string.modify_success)
-    val deleteSuccess = stringResource(R.string.delete_success)
-    val copied = stringResource(R.string.copy_to_clipboard)
-
     if (showImportDialog) {
         ImportSharedHKeyframeDialog(
             onDismiss = onImportDialogDismiss,
@@ -75,7 +70,7 @@ fun HKeyframesRouteScreen(
                     sharedHKeyframeEntity = entity
                     onImportDialogDismiss()
                 } else {
-                    GlobalToasts.show(notDetected, level = GlobalToasts.ToastLevel.WARNING)
+                    showShortToast(R.string.h_keyframes_shared_by_other_not_detected)
                 }
             },
         )
@@ -89,19 +84,19 @@ fun HKeyframesRouteScreen(
         },
         onUpdateEntityTitle = { entity, newTitle ->
             viewModel.updateHKeyframes(entity.copy(title = newTitle))
-            GlobalToasts.show(modifySuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+            showShortToast(R.string.modify_success)
         },
         onDeleteKeyframe = { videoCode, keyframe ->
             viewModel.removeHKeyframe(videoCode, keyframe)
-            GlobalToasts.show(deleteSuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+            showShortToast(R.string.delete_success)
         },
         onUpdateKeyframe = { videoCode, oldKeyframe, newKeyframe ->
             viewModel.modifyHKeyframe(videoCode, oldKeyframe, newKeyframe)
-            GlobalToasts.show(modifySuccess, level = GlobalToasts.ToastLevel.SUCCESS)
+            showShortToast(R.string.modify_success)
         },
         onCopyShareContent = {
             it.copyToClipboard()
-            GlobalToasts.show(copied, level = GlobalToasts.ToastLevel.INFO)
+            showShortToast(R.string.copy_to_clipboard)
         },
     )
 
@@ -132,7 +127,7 @@ private fun parseSharedHKeyframe(content: String): HKeyframeEntity? {
     return runCatching {
         val matchResult = shareRegex.find(content) ?: return@runCatching null
         val (toBase64) = matchResult.destructured
-        val toJson = String(Base64.decode(toBase64.toByteArray(), Base64.DEFAULT))
+        val toJson = toBase64.decodeFromStringByBase64()
         Json.decodeFromString<HKeyframeEntity>(toJson)
     }.getOrNull()
 }

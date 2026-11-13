@@ -6,6 +6,7 @@ import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.ui.navigation.settings.SettingsPreferenceKeys
 
+const val HOME_CATEGORY_CONTINUE_WATCHING = "continue_watching"
 const val HOME_CATEGORY_LATEST_HANIME = "latest_hanime"
 const val HOME_CATEGORY_LATEST_RELEASE = "latest_release"
 const val HOME_CATEGORY_LATEST_UPLOAD = "latest_upload"
@@ -26,6 +27,7 @@ data class HomeCategoryPreferenceItem(
 )
 
 val defaultHomeCategoryPreferenceItems = listOf(
+    HomeCategoryPreferenceItem(HOME_CATEGORY_CONTINUE_WATCHING, R.string.continue_watching),
     HomeCategoryPreferenceItem(HOME_CATEGORY_LATEST_HANIME, R.string.latest_hanime, R.string.latest_av),
     HomeCategoryPreferenceItem(HOME_CATEGORY_LATEST_RELEASE, R.string.latest_release),
     HomeCategoryPreferenceItem(HOME_CATEGORY_LATEST_UPLOAD, R.string.latest_upload),
@@ -70,5 +72,12 @@ fun saveHomeCategoryPreferences(order: List<String>, hiddenKeys: Set<String>) {
 
 private fun normalizeHomeCategoryKeys(keys: List<String>): List<String> {
     val defaults = defaultHomeCategoryOrder
-    return keys.distinct().filter { it in defaults } + defaults.filterNot { it in keys }
+    val saved = keys.distinct().filter { it in defaults }
+    val missing = defaults.filterNot { it in saved }
+    val normalized = saved.toMutableList()
+    if (HOME_CATEGORY_CONTINUE_WATCHING in missing) {
+        normalized.add(0, HOME_CATEGORY_CONTINUE_WATCHING)
+    }
+    normalized += missing.filterNot { it == HOME_CATEGORY_CONTINUE_WATCHING }
+    return normalized
 }

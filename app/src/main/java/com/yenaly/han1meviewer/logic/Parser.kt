@@ -13,7 +13,6 @@ import com.yenaly.han1meviewer.logic.exception.LoginStateExpiredException
 import com.yenaly.han1meviewer.logic.exception.ParseException
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.HanimePreview
-import com.yenaly.han1meviewer.logic.model.HanimeSearchResult
 import com.yenaly.han1meviewer.logic.model.HanimeVideo
 import com.yenaly.han1meviewer.logic.model.CreatorUploadingItem
 import com.yenaly.han1meviewer.logic.model.HomePage
@@ -48,9 +47,6 @@ object Parser {
     object Regex {
         val videoSource = Regex("""const source = '(.+)'""")
         val viewAndUploadTime = Regex("""(觀看次數|观看次数)：(.+次) *(\d{4}-\d{2}-\d{2})""")
-
-        // AV 站的 CDN 節點（t26 / t27 / t30 等）可能已失效，需要統一切換成可用的 t33
-        val avCdnHost = Regex("""^(\s*(?:https?:)?//)t\d+\.cdn2020\.com(?=[/:]|\z)""", RegexOption.IGNORE_CASE)
     }
 
     fun extractTokenFromLoginPage(body: String): String {
@@ -163,7 +159,8 @@ object Parser {
             newAnimeTrailerItems?.forEach { newAnimeTrailerItem ->
                 val videoCode = newAnimeTrailerItem.attr("href").toVideoCode()
 
-                val coverUrl = newAnimeTrailerItem.selectFirst("img")?.attr("src")
+                val coverUrl = newAnimeTrailerItem.selectFirst("img")?.absUrl("src")
+                    ?.ifBlank { newAnimeTrailerItem.selectFirst("img")?.attr("src") }
                 val title = newAnimeTrailerItem.selectFirst("div.home-rows-videos-title")?.text()
                 if (title == null || coverUrl == null || videoCode == null) return@forEach
                 newAnimeTrailerList.add(
@@ -209,7 +206,7 @@ object Parser {
         return userHomePageLink.contains("/login") || username.isNullOrBlank()
     }
 
-    private fun getString(resId: Int) = com.yenaly.han1meviewer.util.applicationContext.getString(resId)
+    private fun getString(resId: Int) = com.yenaly.yenaly_libs.utils.applicationContext.getString(resId)
     fun Element?.extractHanimeInfo(selector: String = "div[class^=horizontal-card]"): MutableList<HanimeInfo> {
         val resultList = mutableListOf<HanimeInfo>()
         this?.select(selector)?.forEach { item ->
@@ -220,9 +217,8 @@ object Parser {
         return resultList
     }
 
-    fun hanimeSearch(body: String): PageLoadingState<HanimeSearchResult> {
+    fun hanimeSearch(body: String): PageLoadingState<MutableList<HanimeInfo>> {
         val parseBody = Jsoup.parse(body).body()
-        val maxPage = parseSearchMaxPage(parseBody)
         val allContentsClass =
             parseBody.getElementsByClass("content-padding-new").firstOrNull()
         val allSimplifiedContentsClass =
@@ -230,11 +226,11 @@ object Parser {
 
         // emit!
         if (allContentsClass != null) {
-            return hanimeSearchNormalVer2(allContentsClass, maxPage)
+            return hanimeSearchNormalVer2(allContentsClass)
         } else if (allSimplifiedContentsClass != null) {
-            return hanimeSearchSimplified(allSimplifiedContentsClass, maxPage)
+            return hanimeSearchSimplified(allSimplifiedContentsClass)
         }
-        return PageLoadingState.Success(HanimeSearchResult(emptyList(), maxPage))
+        return PageLoadingState.Success(mutableListOf())
     }
 
     private fun hanimeNormalItemVer2(hanimeSearchItem: Element): HanimeInfo? {
@@ -251,23 +247,16 @@ object Parser {
         val durationAndViews = hanimeSearchItem.select("div[class^=thumb-container]")
         val duration = durationAndViews.select("div[class^=duration]").text()
         val views = durationAndViews.select("div[class^=stat-item]").getOrNull(1)?.text()
-        val subtitleElement = hanimeSearchItem.selectFirst("div.subtitle, div.video-meta-data")
-        val artistAndUploadTime = subtitleElement?.text()?.trim().orEmpty()
+        val artistAndUploadTime = hanimeSearchItem.selectFirst("div.subtitle a, div.video-meta-data a")!!.text().trim()
         var artist = ""
         var uploadTime = ""
         if (artistAndUploadTime.contains("•")) {
             val parts = artistAndUploadTime.split("•").map { it.trim() }
-            artist = parts.getOrNull(0).orEmpty()
-            uploadTime = parts.getOrNull(1).orEmpty()
-        } else {
-            artist = subtitleElement?.selectFirst("a")?.text()?.trim().orEmpty()
-            uploadTime = subtitleElement?.selectFirst("span.subtitle-time, span")?.text()?.trim().orEmpty()
+            artist = parts[0].trim()
+            uploadTime = parts[1].trim()
         }
         val infoBoxes = hanimeSearchItem.selectFirst(".stats-container .stat-item")
         val reviews = infoBoxes?.ownText()?.trim() ?: ""
-        val playlistItemId = hanimeSearchItem.id()
-            .takeIf { it.startsWith("playlist-item-") }
-            ?.substringAfter("playlist-item-")
         return HanimeInfo(
             title = title,
             coverUrl = coverUrl,
@@ -277,7 +266,6 @@ object Parser {
             views = views.logIfParseNull(Parser::hanimeNormalItemVer2.name, "views"),
             uploadTime = uploadTime,
             genre = null,
-            playlistItemId = playlistItemId,
             itemType = HanimeInfo.NORMAL,
             reviews = reviews
         )
@@ -287,22 +275,16 @@ object Parser {
     private fun hanimeSimplifiedItem(hanimeSearchItem: Element): HanimeInfo? {
         val videoCode = hanimeSearchItem.attr("href").toVideoCode()
             .logIfParseNull(Parser::hanimeSimplifiedItem.name, "videoCode")
-        val coverUrl = hanimeSearchItem.selectFirst("img")?.attr("src")
+        val coverUrl = hanimeSearchItem.selectFirst("img")?.absUrl("src")
+            ?.ifBlank { hanimeSearchItem.selectFirst("img")?.attr("src") }
             .logIfParseNull(Parser::hanimeSimplifiedItem.name, "coverUrl")
         val title = hanimeSearchItem.selectFirst("div[class=home-rows-videos-title]")?.text()
             .logIfParseNull(Parser::hanimeSimplifiedItem.name, "title")
         if (videoCode == null || coverUrl == null || title == null) return null
-        // 新番預告的搜索結果會在封面左上角顯示發佈日期，例如「11月27日」。
-        val uploadTime = hanimeSearchItem
-            .selectFirst("div.video-card-inner > div.hidden-xs")
-            ?.text()
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
         return HanimeInfo(
             title = title,
             coverUrl = coverUrl,
             videoCode = videoCode,
-            uploadTime = uploadTime,
             itemType = HanimeInfo.SIMPLIFIED
         )
     }
@@ -310,8 +292,7 @@ object Parser {
     // 出来后是正常视频单元的页面用这个
     private fun hanimeSearchNormalVer2(
         allContentsClass: Element,
-        maxPage: Int,
-    ): PageLoadingState<HanimeSearchResult> {
+    ): PageLoadingState<MutableList<HanimeInfo>> {
         val hanimeSearchList = mutableListOf<HanimeInfo>()
         val hanimeSearchItems =
             allContentsClass.select("div[class^=horizontal-card]")
@@ -323,14 +304,13 @@ object Parser {
             }
         }
         Log.d("search_result", "$hanimeSearchList")
-        return PageLoadingState.Success(HanimeSearchResult(hanimeSearchList, maxPage))
+        return PageLoadingState.Success(hanimeSearchList)
     }
 
     // 出来后是简化版视频单元的页面用这个
     private fun hanimeSearchSimplified(
         allSimplifiedContentsClass: Element,
-        maxPage: Int,
-    ): PageLoadingState<HanimeSearchResult> {
+    ): PageLoadingState<MutableList<HanimeInfo>> {
         val hanimeSearchList = mutableListOf<HanimeInfo>()
         val hanimeSearchItems = allSimplifiedContentsClass.children()
         if (hanimeSearchItems.isEmpty()) {
@@ -338,15 +318,7 @@ object Parser {
         } else hanimeSearchItems.forEach { hanimeSearchItem ->
             hanimeSimplifiedItem(hanimeSearchItem)?.let(hanimeSearchList::add)
         }
-        return PageLoadingState.Success(HanimeSearchResult(hanimeSearchList, maxPage))
-    }
-
-    /**
-     * AV 站的 CDN 節點可能已失效，這裡統一修正成可用的節點；其餘站點原樣返回。
-     */
-    private fun fixAvCdnHost(url: String): String {
-        if (Preferences.baseUrl != HANIME_URL[3]) return url
-        return Regex.avCdnHost.replace(url) { "${it.groupValues[1]}t33.cdn2020.com" }
+        return PageLoadingState.Success(hanimeSearchList)
     }
 
     fun hanimeVideoVer2(body: String): VideoLoadingState<HanimeVideo> {
@@ -572,7 +544,7 @@ object Parser {
         if (!videos.isNullOrEmpty()) {
             videos.forEach { source ->
                 val resolution = source.attr("size") + "P"
-                val sourceUrl = fixAvCdnHost(source.absUrl("src"))
+                val sourceUrl = source.absUrl("src")
                 val videoType = source.attr("type")
                 hanimeResolution.parseResolution(resolution, sourceUrl, videoType)
             }
@@ -584,7 +556,7 @@ object Parser {
                     if (data.isBlank()) continue
                     val result =
                         Regex.videoSource.find(data)?.groups?.get(1)?.value ?: continue
-                    hanimeResolution.parseResolution(null, fixAvCdnHost(result))
+                    hanimeResolution.parseResolution(null, result)
                     break
                 }
             }
@@ -747,51 +719,18 @@ object Parser {
         )
     }
 
-    /**
-     * 將「新番預告」搜索結果轉換成預覽頁使用的數據。
-     *
-     * 搜索結果只提供封面、標題、影片代碼和發佈日期；其餘欄位會在預覽頁
-     * 顯示對應卡片時，再從影片詳情頁補充。
-     */
-    fun hanimePreviewFromSearch(list: List<HanimeInfo>): HanimePreview {
-        return HanimePreview(
-            headerPicUrl = list.firstOrNull()?.coverUrl,
-            hasPrevious = false,
-            hasNext = false,
-            latestHanime = list,
-            previewInfo = list.map { it.toPreviewInfo() },
-        )
-    }
-
-    private fun HanimeInfo.toPreviewInfo(): HanimePreview.PreviewInfo {
-        return HanimePreview.PreviewInfo(
-            // 搜索結果只有中文短標題，先用 videoTitle 展示；詳情補全後再拆成主副標題。
-            title = null,
-            videoTitle = title,
-            coverUrl = coverUrl,
-            introduction = null,
-            brand = currentArtist?.takeIf { it.isNotBlank() },
-            releaseDate = uploadTime,
-            videoCode = videoCode,
-            tags = emptyList(),
-            relatedPicsUrl = emptyList(),
-        )
-    }
-
     fun myListItems(body: String): PageLoadingState<MyListItems<HanimeInfo>> {
         val parseBody = Jsoup.parse(body).body()
         val csrfToken = parseBody.selectFirst("input[name=_token]")?.attr("value")
         val desc = parseBody.getElementById("playlist-show-description")?.ownText()
         val allHanimeClass = parseBody.getElementsByClass("horizontal-row").firstOrNull()
         val myListHanimeList = allHanimeClass.extractHanimeInfo("div[class^=user-tab-item-wrapper]")
-        val maxPage = parseListMaxPage(parseBody)
 
         return PageLoadingState.Success(
             MyListItems(
                 myListHanimeList,
                 desc = desc,
-                csrfToken = csrfToken,
-                maxPage = maxPage,
+                csrfToken = csrfToken
             )
         )
     }
@@ -802,14 +741,12 @@ object Parser {
         val desc = parseBody.select("p.playlist-description").first()?.text()
         val allHanimeClass = parseBody.getElementsByClass("playlist-video-list").firstOrNull()
         val myListHanimeList = allHanimeClass.extractHanimeInfo("div[class^=user-tab-item-wrapper]")
-        val maxPage = parseListMaxPage(parseBody)
 
         return PageLoadingState.Success(
             MyListItems(
                 myListHanimeList,
                 desc = desc,
-                csrfToken = csrfToken,
-                maxPage = maxPage,
+                csrfToken = csrfToken
             )
         )
     }
@@ -822,13 +759,14 @@ object Parser {
         return if (items.isEmpty()) {
             PageLoadingState.NoMoreData
         } else {
-            PageLoadingState.Success(
-                MyListItems(items, csrfToken = csrfToken, maxPage = parseListMaxPage(parseBody))
-            )
+            PageLoadingState.Success(MyListItems(items, csrfToken = csrfToken))
         }
     }
 
-    fun userAccountPage(body: String): WebsiteState<UserAccount> {
+    fun userAccountPage(
+        body: String,
+        fallbackUserId: String? = null,
+    ): WebsiteState<UserAccount> {
         val parseBody = Jsoup.parse(body).body()
         extractFormError(parseBody)?.let { errorMessage ->
             return WebsiteState.Error(IllegalStateException(errorMessage))
@@ -837,21 +775,24 @@ object Parser {
         val csrfToken = parseBody.selectFirst("meta[name=csrf-token]")?.attr("content")
             ?: parseBody.selectFirst("input[name=_token]")?.attr("value")
         val avatarElement = parseBody.selectFirst("img#playlist-avatar")
-        val avatarUrl = avatarElement?.absUrl("src")?.ifBlank { avatarElement.attr("src") }
-            .throwIfParseNull(Parser::userAccountPage.name, "avatarUrl")
-        val username = parseBody.selectFirst("input[name=name]")?.attr("value")?.trim()
-            .throwIfParseNull(Parser::userAccountPage.name, "username")
-        // 2026-11 網站改版：email 輸入框不再帶 name 屬性，改為 id="email"（且 disabled 唯讀），
-        // 新版選擇器優先，舊版 input[name=email] 作為回退相容。
-        val emailInput = parseBody.selectFirst("#email")
-            ?: parseBody.selectFirst("input[name=email]")
-        val email = emailInput?.attr("value")?.trim()
-            .throwIfParseNull(Parser::userAccountPage.name, "email")
-        // 網站將 email 設為 disabled（唯讀）時，App 端的編輯狀態與其保持同步
-        val emailEditable = emailInput?.hasAttr("disabled") == false
+            ?: parseBody.selectFirst("#user-photo-wrapper img")
+            ?: parseBody.selectFirst(".profile-avatar-wrapper img")
+            ?: parseBody.selectFirst("img.profile-avatar")
+        val avatarUrl = avatarElement?.let { element ->
+            element.absUrl("src").ifBlank { element.attr("src") }
+        }.orEmpty()
+        val username = (
+            parseBody.selectFirst("input[name=name]")?.attr("value")?.trim()?.takeIf { it.isNotEmpty() }
+                ?: parseBody.selectFirst(".profile-display-name")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+                ?: parseBody.selectFirst("#user-modal-name")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+            ).throwIfParseNull(Parser::userAccountPage.name, "username")
+        val email = parseBody.selectFirst("input[name=email]")?.attr("value")?.trim()
+            ?: parseBody.selectFirst("input[type=email]")?.attr("value")?.trim()
+            ?: ""
         val userIdText = parseBody.selectFirst("div.profile-sub-stats-id")?.text()
-            .throwIfParseNull(Parser::userAccountPage.name, "userId")
-        val userId = Regex("""\d+""").find(userIdText)?.value
+            ?: parseBody.selectFirst("a[href*=/user/]")?.attr("href")
+        val userId = userIdText?.let { Regex("""\d+""").find(it)?.value }
+            ?: fallbackUserId?.takeIf { it.isNotBlank() }
             .throwIfParseNull(Parser::userAccountPage.name, "userId")
         val joinedLabel = parseBody.selectFirst("#user-modal-created")?.text()?.trim()
         val statsText = parseBody.selectFirst("div.profile-sub-stats-new-line")?.text().orEmpty()
@@ -869,7 +810,6 @@ object Parser {
                 joinedLabel = joinedLabel,
                 subscriberCount = statNumbers.getOrElse(0) { 0 },
                 videoCount = statNumbers.getOrElse(1) { 0 },
-                emailEditable = emailEditable,
             )
         )
     }
@@ -882,9 +822,7 @@ object Parser {
         return if (items.isEmpty()) {
             PageLoadingState.NoMoreData
         } else {
-            PageLoadingState.Success(
-                MyListItems(items, csrfToken = csrfToken, maxPage = parseListMaxPage(parseBody))
-            )
+            PageLoadingState.Success(MyListItems(items, csrfToken = csrfToken))
         }
     }
 
@@ -902,7 +840,7 @@ object Parser {
                 card.selectFirst("img.main-thumb")?.attr("src")
             } ?: return@mapNotNull null
             val duration = card.selectFirst("div.duration")?.text()?.trim()
-            val subtitleText = card.selectFirst("div.subtitle")?.text()?.trim().orEmpty()
+            val subtitleText = card.selectFirst("div.subtitle a")?.text()?.trim().orEmpty()
             val artist = subtitleText.substringBefore("•").trim().ifBlank { null }
             val uploadTime = subtitleText.substringAfter("•", "").trim().ifBlank { null }
             val remoteVideoUrl = link.attr("href")
@@ -925,9 +863,7 @@ object Parser {
         return if (items.isEmpty()) {
             PageLoadingState.NoMoreData
         } else {
-            PageLoadingState.Success(
-                MyListItems(items, csrfToken = csrfToken, maxPage = parseListMaxPage(parseBody))
-            )
+            PageLoadingState.Success(MyListItems(items, csrfToken = csrfToken))
         }
     }
 
@@ -966,13 +902,7 @@ object Parser {
                 listCode = listCode, title = listTitle, total = formatedTotal, coverUrl = coverUrl
             )
         }
-        return WebsiteState.Success(
-            Playlists(
-                playlists = playlists,
-                csrfToken = csrfToken,
-                maxPage = parseListMaxPage(parseBody),
-            )
-        )
+        return WebsiteState.Success(Playlists(playlists = playlists, csrfToken = csrfToken))
     }
 
     @SuppressLint("BuildListAdds")
@@ -1001,9 +931,6 @@ object Parser {
             val content = textClass.getOrNull(1)?.text()
                 .throwIfParseNull(Parser::comments.name, "content")
             val hasMoreReplies = child.selectFirst("div[class^=load-replies-btn]") != null
-            val thumbUp = child.getElementById("comment-like-form-wrapper")
-                ?.select("span[style]")?.getOrNull(1)
-                ?.text()?.toIntOrNull()
             val id = child.selectFirst("div[id^=reply-section-wrapper]")
                 ?.id()?.substringAfterLast("-")
 
@@ -1017,6 +944,17 @@ object Parser {
                 child.selectFirst("input[name=like-comment-status]")?.attr("value")
             val unlikeCommentStatus =
                 child.selectFirst("input[name=unlike-comment-status]")?.attr("value")
+            // 站点只显示一个「净值」= 赞 - 踩（hidden input comment-likes-sum），
+            // comment-likes-count 才是赞数。由此可反推踩数 = 赞数 - 净值。
+            // 例：likes-count=20、likes-sum=-8 → 赞 20、踩 28。
+            val likesCount = commentLikesCount?.toIntOrNull()
+            val likesSum = commentLikesSum?.toIntOrNull()
+            val thumbUp = likesCount
+            val thumbDown = if (likesCount != null && likesSum != null) {
+                (likesCount - likesSum).coerceAtLeast(0)
+            } else {
+                null
+            }
 
             val post = VideoComments.VideoComment.POST(
                 foreignId.logIfParseNull(Parser::comments.name, "foreignId", loginNeeded = true),
@@ -1045,6 +983,7 @@ object Parser {
                     avatar = avatarUrl, username = username, date = date,
                     content = content, hasMoreReplies = hasMoreReplies, replyCount = replyCount,
                     thumbUp = thumbUp.logIfParseNull(Parser::comments.name, "thumbUp"),
+                    thumbDown = thumbDown,
                     id = id.logIfParseNull(Parser::comments.name, "id"),
                     isChildComment = false, post = post,
                     redirectUrl = reportRedirectUrl, reportableId = reportableId, reportableType = reportableType
@@ -1083,10 +1022,6 @@ object Parser {
                     .throwIfParseNull(Parser::commentReply.name, "date")
                 val content = textClass?.getOrNull(1)?.text()
                     .throwIfParseNull(Parser::commentReply.name, "content")
-                val thumbUp = postClass
-                    ?.select("span[style]")?.getOrNull(1)
-                    ?.text()?.toIntOrNull()
-
                 val foreignId =
                     postClass?.getElementById("foreign_id")?.attr("value")
                 val isPositive =
@@ -1101,6 +1036,15 @@ object Parser {
                     postClass?.selectFirst("input[name=like-comment-status]")?.attr("value")
                 val unlikeCommentStatus =
                     postClass?.selectFirst("input[name=unlike-comment-status]")?.attr("value")
+                // 与主评论一致：赞数 = comment-likes-count，踩数 = 赞数 - comment-likes-sum
+                val likesCount = commentLikesCount?.toIntOrNull()
+                val likesSum = commentLikesSum?.toIntOrNull()
+                val thumbUp = likesCount
+                val thumbDown = if (likesCount != null && likesSum != null) {
+                    (likesCount - likesSum).coerceAtLeast(0)
+                } else {
+                    null
+                }
                 val post = VideoComments.VideoComment.POST(
                     foreignId.logIfParseNull(
                         Parser::commentReply.name,
@@ -1132,6 +1076,7 @@ object Parser {
                         avatar = avatarUrl, username = username, date = date,
                         content = content,
                         thumbUp = thumbUp.logIfParseNull(Parser::commentReply.name, "thumbUp"),
+                        thumbDown = thumbDown,
                         id = null,
                         isChildComment = true, post = post, reportableId = reportableId,
                         reportableType = reportableType, redirectUrl = reportRedirectUrl
@@ -1198,17 +1143,13 @@ object Parser {
                     val durationAndViews = videoCard.select("div[class^=thumb-container]")
                     val duration = durationAndViews.select("div[class^=duration]").text()
                     val views = durationAndViews.select("div[class^=stat-item]").getOrNull(1)?.text()
-                    val subtitleElement = videoCard.selectFirst("div.subtitle")
-                    val artistAndUploadTime = subtitleElement?.text()?.trim().orEmpty()
+                    val artistAndUploadTime = videoCard.select("div.subtitle a").text().trim()
                     var artist = ""
                     var uploadTime = ""
                     if (artistAndUploadTime.contains("•")) {
                         val parts = artistAndUploadTime.split("•").map { it.trim() }
-                        artist = parts.getOrNull(0).orEmpty()
-                        uploadTime = parts.getOrNull(1).orEmpty()
-                    } else {
-                        artist = subtitleElement?.selectFirst("a")?.text()?.trim().orEmpty()
-                        uploadTime = subtitleElement?.selectFirst("span.subtitle-time, span")?.text()?.trim().orEmpty()
+                        artist = parts[0].trim()
+                        uploadTime = parts[1].trim()
                     }
                     val infoBoxes = videoCard.selectFirst(".stats-container .stat-item")
                     val reviews = infoBoxes?.ownText()?.trim() ?: ""
@@ -1243,32 +1184,9 @@ object Parser {
             .lastOrNull()
             ?.select("a.page-link[href]")
             ?.mapNotNull {
-                Regex("""[?&]page=(\d+)""").find(it.attr("href"))?.groupValues?.get(1)?.toIntOrNull()
+                Regex("""\?page=(\d+)""").find(it.attr("href"))?.groupValues?.get(1)?.toIntOrNull()
             }
             ?.maxOrNull() ?: 1
-    }
-
-    /**
-     * 搜索页没有静态的分页列表，总页数藏在「跳到指定页」的表单里：
-     * <input id="skip-page-input" oninput="validateNumberInput(this, 1, 232)" .../>
-     */
-    private fun parseSearchMaxPage(parseBody: Element): Int {
-        val input = parseBody.selectFirst("input#skip-page-input") ?: return 1
-        return Regex("""validateNumberInput\(this,\s*\d+,\s*(\d+)\)""")
-            .find(input.attr("oninput"))
-            ?.groupValues?.get(1)
-            ?.toIntOrNull()
-            ?: 1
-    }
-
-    /**
-     * 列表页（我的清单、历史、创作者中心等）的总页数：优先尝试「跳到指定页」表单，
-     * 否则回退到订阅页使用的 ul.pagination 结构。
-     */
-    private fun parseListMaxPage(parseBody: Element): Int {
-        val searchMax = parseSearchMaxPage(parseBody)
-        if (searchMax > 1) return searchMax
-        return parseMaxPage(parseBody)
     }
 
     /**

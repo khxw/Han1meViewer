@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import com.yenaly.han1meviewer.ui.activity.CloudflareActivity
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.util.concurrent.CountDownLatch
@@ -18,7 +18,16 @@ class CloudflareInterceptor(
         val request = chain.request()
         val response = chain.proceed(request)
 
-        if (response.code == 403 && response.header("cf-mitigated") == "challenge") {
+        // Cloudflare 有两种表现：带 `cf-mitigated: challenge` 响应头，或者只回一个
+        // 403 + "Just a moment…" 的 HTML。只认前者会导致直接弹错误提示、根本不打开验证页。
+        val isChallenge = response.code == 403 && (
+            response.header("cf-mitigated") == "challenge" ||
+                runCatching { response.peekBody(8 * 1024).string() }
+                    .getOrDefault("")
+                    .contains("Just a moment", ignoreCase = true)
+            )
+
+        if (isChallenge) {
             response.close()
             val url = request.url.toString()
 
@@ -37,7 +46,11 @@ class CloudflareInterceptor(
                 context.startActivity(intent)
             } catch (e: Exception){
                 Handler(Looper.getMainLooper()).post {
-                    GlobalToasts.show("cf启动失败错误: ${e.javaClass.simpleName}", level = GlobalToasts.ToastLevel.ERROR)
+                    Toast.makeText(
+                        context.applicationContext,
+                        "cf启动失败错误: ${e.javaClass.simpleName}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
                 CloudflareActivity.onFinished?.invoke()
             }
@@ -49,5 +62,4 @@ class CloudflareInterceptor(
         return response
     }
 }
-
 

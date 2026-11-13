@@ -39,17 +39,45 @@ abstract class WatchHistoryDao {
     @Query("SELECT * FROM WatchHistoryEntity WHERE videoCode IN (:videoCodes)")
     abstract suspend fun findByVideoCodes(videoCodes: List<String>): List<WatchHistoryEntity>
 
-    @Query("SELECT videoCode FROM WatchHistoryEntity WHERE videoCode IN (:codes) AND watched = 1")
-    abstract suspend fun getWatchedCodes(codes: List<String>): List<String>
-
-    @Query("UPDATE WatchHistoryEntity SET watched = 1 WHERE videoCode = :videoCode")
-    abstract suspend fun markWatched(videoCode: String)
-
     @Query("SELECT * FROM WatchHistoryEntity ORDER BY watchDate DESC LIMIT :limit")
     abstract suspend fun getRecentWatches(limit: Int): List<WatchHistoryEntity>
 
+    @Query(
+        """
+        SELECT * FROM WatchHistoryEntity
+        WHERE progress > 0 AND isCompleted = 0
+        ORDER BY watchDate DESC
+        LIMIT :limit
+        """
+    )
+    abstract fun loadContinueWatching(limit: Int): Flow<List<WatchHistoryEntity>>
+
     @Query("UPDATE WatchHistoryEntity SET progress = :progress WHERE videoCode = :videoCode")
     abstract suspend fun updateProgress(videoCode: String, progress: Long)
+
+    @Query(
+        """
+        UPDATE WatchHistoryEntity
+        SET progress = :progress,
+            duration = CASE WHEN :duration > 0 THEN :duration ELSE duration END
+        WHERE videoCode = :videoCode
+        """
+    )
+    abstract suspend fun updateProgress(videoCode: String, progress: Long, duration: Long)
+
+    @Query(
+        """
+        UPDATE WatchHistoryEntity
+        SET progress = CASE WHEN :duration > 0 THEN :duration ELSE progress END,
+            duration = CASE WHEN :duration > 0 THEN :duration ELSE duration END,
+            isCompleted = 1
+        WHERE videoCode = :videoCode
+        """
+    )
+    abstract suspend fun markCompleted(videoCode: String, duration: Long)
+
+    @Query("UPDATE WatchHistoryEntity SET isCompleted = 0 WHERE videoCode = :videoCode")
+    abstract suspend fun resetCompleted(videoCode: String)
 
     @Transaction
     open suspend fun insertOrUpdate(history: WatchHistoryEntity) {
@@ -58,7 +86,12 @@ abstract class WatchHistoryDao {
             val merged = history.copy(
                 id = dbEntity.id,
                 progress = if (history.progress == 0L) dbEntity.progress else history.progress,
-                watched = dbEntity.watched || history.watched
+                duration = if (history.duration == 0L) dbEntity.duration else history.duration,
+                isCompleted = when {
+                    history.isCompleted -> true
+                    history.progress > 0L -> false
+                    else -> dbEntity.isCompleted
+                },
             )
             update(merged)
         } else {

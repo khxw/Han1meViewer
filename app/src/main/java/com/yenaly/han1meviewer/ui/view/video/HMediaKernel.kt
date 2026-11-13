@@ -1,6 +1,5 @@
 package com.yenaly.han1meviewer.ui.view.video
 
-import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.SurfaceTexture
@@ -42,7 +41,7 @@ import com.yenaly.han1meviewer.USER_AGENT
 import com.yenaly.han1meviewer.logic.network.HProxySelector
 import com.yenaly.han1meviewer.util.AnimeShaders
 import com.yenaly.han1meviewer.util.AnimeShaders.getCert
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.yenaly_libs.utils.showShortToast
 import `is`.xyz.mpv.MPVLib
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -97,54 +96,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
 
     companion object {
         const val TAG = "ExoMediaKernel"
-
-        private const val MIB = 1024 * 1024
-
-        /** 起播只需要 1 秒缓冲，卡顿后重新起播需要 2 秒。 */
-        private const val BUFFER_FOR_PLAYBACK_MS = 1_000
-        private const val BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS = 2_000
-
-        /**
-         *
-         * #676 部分情况下会OOM，减少内存预算
-         * 按普通 Java 堆大小选择播放缓冲配置。
-         *
-         * Media3 默认会按 125 MB 视频 + 12.5 MB 音频准备缓冲，在 256 MB 堆的设备上，
-         * 加上图片缓存后很容易直接 OOM。这里根据 `ActivityManager.memoryClass`
-         * 分档限制缓冲，既照顾低内存设备，也尽量不牺牲大堆设备的播放体验。
-         */
-        @OptIn(UnstableApi::class)
-        private fun createLoadControl(context: Context): LoadControl {
-            val memoryClassMb = context.getSystemService(ActivityManager::class.java)
-                ?.memoryClass
-                ?.takeIf { it > 0 }
-                ?: 256
-
-            // targetBufferBytes 是视频、音频、字幕等所有轨道的合计上限。
-            val (targetBufferBytes, minBufferMs, maxBufferMs) = when {
-                memoryClassMb <= 256 -> Triple(48 * MIB, 10_000, 20_000)
-                memoryClassMb <= 384 -> Triple(64 * MIB, 15_000, 30_000)
-                else -> Triple(96 * MIB, 20_000, 40_000)
-            }
-            Log.i(
-                TAG,
-                "memoryClass=${memoryClassMb}MB, " +
-                        "targetBuffer=${targetBufferBytes / MIB}MB, " +
-                        "bufferRange=${minBufferMs / 1_000}s-${maxBufferMs / 1_000}s",
-            )
-
-            return DefaultLoadControl.Builder()
-                .setBufferDurationsMs(
-                    minBufferMs,
-                    maxBufferMs,
-                    BUFFER_FOR_PLAYBACK_MS,
-                    BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
-                )
-                .setTargetBufferBytes(targetBufferBytes)
-                // 优先按内存上限停止加载，避免低内存设备被缓冲撑爆。
-                .setPrioritizeTimeOverSizeThresholds(false)
-                .build()
-        }
     }
 
     private var _exoPlayer: ExoPlayer? = null
@@ -179,7 +130,18 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
             val videoTrackSelectionFactory = AdaptiveTrackSelection.Factory()
             val trackSelector = DefaultTrackSelector(context, videoTrackSelectionFactory)
 
-            val loadControl: LoadControl = createLoadControl(context)
+            val loadControl: LoadControl = DefaultLoadControl.Builder()
+                // 默认值是 (50s, 50s, 2.5s, 5s)：起播只要 2.5s 缓冲，
+                // 网络一抖就反复进入重缓冲，表现就是「一卡一卡」。
+                // 这里加大「重缓冲后恢复播放」的门槛：宁可多等一次，也不要连续小卡。
+                .setBufferDurationsMs(
+                    /* minBufferMs = */ 20_000,
+                    /* maxBufferMs = */ 60_000,
+                    /* bufferForPlaybackMs = */ 4_000,
+                    /* bufferForPlaybackAfterRebufferMs = */ 10_000,
+                )
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
 
 
             val bandwidthMeter = DefaultBandwidthMeter.Builder(context).build()
@@ -194,11 +156,14 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
                 }
 
             // Produces DataSource instances through which media data is loaded.
-            val dataSourceFactory = DefaultDataSource.Factory(
-                context,
-                DefaultHttpDataSource.Factory()
-                    .setDefaultRequestProperties(jzvd.jzDataSource.headerMap)
-            )
+            val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+                .setDefaultRequestProperties(jzvd.jzDataSource.headerMap)
+                // 默认 connect / read 都是 8 秒，弱网或跨境 CDN 很容易被误判超时后重连
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(15_000)
+                // CDN 可能把 http 跳到 https，默认不允许跨协议跳转
+                .setAllowCrossProtocolRedirects(true)
+            val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
 
             val currUrl = jzvd.jzDataSource.currentUrl.toString()
             val videoSource = if (currUrl.contains(".m3u8")) {
@@ -235,12 +200,6 @@ class ExoMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd), Player.Listener, HMed
     override fun start() {
         mMediaHandler?.post {
             _exoPlayer?.playWhenReady = true
-        }
-    }
-
-    fun setLooping(looping: Boolean) {
-        mMediaHandler?.post {
-            _exoPlayer?.repeatMode = if (looping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         }
     }
 
@@ -542,12 +501,6 @@ class SystemMediaKernel(jzvd: Jzvd) : JZMediaSystem(jzvd), HMediaKernel {
     override fun isPlaying(): Boolean {
         return mediaPlayer?.isPlaying == true
     }
-
-    fun setLooping(looping: Boolean) {
-        mMediaHandler?.post {
-            mediaPlayer?.isLooping = looping
-        }
-    }
 }
 
 class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
@@ -566,6 +519,24 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
     private var currentPfd: ParcelFileDescriptor? = null
     private var detachFd: Int? = null
     private var pfdFilePath = false
+
+    /**
+     * loadfile 已执行、视频正在播放；用于区分“首次加载”与“PIP 切换导致
+     * SurfaceTexture 重建后只需重新绑定渲染 surface”两种场景
+     */
+    private var isLoaded = false
+
+    /**
+     * PIP 小窗口模式：该模式下 TextureView 纹理若被系统重建，
+     * 直接重新绑定渲染 surface 自愈；全屏切换等场景仍复用 SAVED_SURFACE
+     * （避免打断 mpv 正常渲染导致全屏黑屏）
+     */
+    private var pipMode = false
+
+    fun setPipMode(inPip: Boolean) {
+        pipMode = inPip
+        Log.i(TAG, "setPipMode: $inPip")
+    }
     private val certFile = getCert(jzvd.context)
     val defaultSpeed = Preferences.playerSpeed
     private val mpvOptions: Map<String, String>
@@ -618,7 +589,9 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
 
             put("deband", if (Preferences.mpvDeband) "yes" else "no")  // 去色带
 
-            put("cache-pause", "no")  // 缓存时是否暂停播放
+            // 缓存不足时暂停等缓冲，而不是硬播。
+            // 设成 "no" 时缓存一空就继续播，画面只能卡着/跳帧——这正是「一卡一卡」的直接来源。
+            put("cache-pause", "yes")
 
             put("network-timeout", Preferences.mpvNetworkTimeout.toString())  // 请求超时
 
@@ -680,7 +653,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
                 MPVLib.setOptionString(key, value)
             }
         } catch (e: Exception){
-            GlobalToasts.show(e.message.orEmpty(), level = GlobalToasts.ToastLevel.ERROR)
+            showShortToast(e.message)
         }
 
         observedProperties.forEach { (name, type) ->
@@ -735,7 +708,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         } finally {
             currentPfd = null
             detachFd = null
-            handler?.postDelayed({
+            handler.postDelayed({
                 Log.i(TAG, "${from ?: "releaseCurrentPfd"} completed. PFD cleared.")
             }, 200)
         }
@@ -759,6 +732,7 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         val path = prepareUri(jzvd.context, uri)
         if (path != null) {
             MPVLib.command(arrayOf("loadfile", path))
+            isLoaded = true
             val surfaceTexture = jzvd.textureView?.surfaceTexture
             surfaceTexture?.let { MPVLib.attachSurface(Surface(it)) }
         }
@@ -766,10 +740,6 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
 
     override fun start() {
         MPVLib.setPropertyBoolean("pause", false)
-    }
-
-    fun setLooping(looping: Boolean) {
-        MPVLib.setPropertyString("loop-file", if (looping) "inf" else "no")
     }
 
     override fun pause() {
@@ -794,10 +764,11 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         MPVLib.setOptionString("force-window", "no")
         MPVLib.detachSurface()
         MPVLib.removeObserver(mpvEventObserver)
-        handler?.postDelayed({
+        handler.postDelayed({
             releaseCurrentPfd("jzvd-release")
-        }, 200)
+        },200)
         SAVED_SURFACE = null
+        isLoaded = false
     }
 
     override fun getCurrentPosition(): Long {
@@ -823,11 +794,57 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
         MPVLib.attachSurface(surface)
     }
 
+    /**
+     * 小窗口（PIP）/全屏切换后 TextureView 的 SurfaceTexture 可能被销毁重建，
+     * 仅对同一纹理重建 Surface 对象无法让 mpv 恢复渲染（表现为有声音无画面）。
+     *
+     * 正确做法：清空 [JZMediaInterface.SAVED_SURFACE]，创建一个全新的
+     * SurfaceTexture 设置给 TextureView，再手动把 mpv 渲染 surface 绑定到新
+     * 纹理上，强制 mpv 重建渲染上下文。
+     */
+    fun rebindSurfaceWithNewTexture() {
+        val textureView = jzvd.textureView ?: return
+        if (!isLoaded) return
+        try {
+            MPVLib.detachSurface()
+            SAVED_SURFACE = null
+            val newTexture = SurfaceTexture(0)
+            // 手动设置缓冲尺寸，避免 mpv 渲染到 0x0 的 surface（导致黑屏）；
+            // 播放器尚未完成布局时尺寸可能为 0，先取最小 1x1，布局完成后
+            // onSurfaceTextureSizeChanged 会再更新实际尺寸
+            newTexture.setDefaultBufferSize(
+                textureView.width.coerceAtLeast(1),
+                textureView.height.coerceAtLeast(1)
+            )
+            textureView.setSurfaceTexture(newTexture)
+            // Android 12+ 的 TextureView 在 view 已 attach 时调用 setSurfaceTexture
+            // 不会回调 onSurfaceTextureAvailable（该回调只在 view 自建纹理时触发），
+            // 因此必须在此手动绑定 mpv 渲染 surface；view 尚未 attach 的场景后续
+            // attach 也只会复用本纹理而不再回调，不会造成重复绑定
+            SAVED_SURFACE = newTexture
+            MPVLib.attachSurface(Surface(newTexture))
+            Log.i(TAG, "rebindSurfaceWithNewTexture: new SurfaceTexture attached, " +
+                    "size=${textureView.width}x${textureView.height}, surface=$newTexture")
+        } catch (e: Exception) {
+            Log.w(TAG, "rebindSurfaceWithNewTexture failed", e)
+        }
+    }
+
     override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-        if (SAVED_SURFACE == null) {
+        if (SAVED_SURFACE == null || pipMode) {
             SAVED_SURFACE = surfaceTexture
-            prepare()
-        } else {
+            if (isLoaded) {
+                // 仅 PIP 模式：系统重建了纹理（旧纹理可能已失效），
+                // 直接重新绑定渲染 surface，避免只有声音没有画面（黑屏）
+                Log.i(TAG, "onSurfaceTextureAvailable: rebind surface, pipMode=$pipMode")
+                MPVLib.detachSurface()
+                MPVLib.attachSurface(Surface(surfaceTexture))
+            } else {
+                prepare()
+            }
+        } else if (surfaceTexture !== SAVED_SURFACE) {
+            // TextureView 自建了新纹理：把 mpv 正在渲染的旧纹理塞回，维持画面连续；
+            // 同一纹理（极端场景）无需任何动作，避免 setSurfaceTexture 抛异常
             jzvd.textureView.setSurfaceTexture(SAVED_SURFACE)
         }
     }
@@ -850,14 +867,22 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
     private fun clearSuperResolution() {
         MPVLib.command(arrayOf("change-list", "glsl-shaders", "clr", ""))
     }
-    fun setSuperResolution(index: Int) {
+    fun setSuperResolution(index: Int): Boolean = runCatching {
         if (index != 0) {
-            val cmd = arrayOf("change-list", "glsl-shaders", "set", AnimeShaders.getShader(jzvd.context, index))
+            val cmd = arrayOf(
+                "change-list",
+                "glsl-shaders",
+                "set",
+                AnimeShaders.getShader(jzvd.context, index),
+            )
             MPVLib.command(cmd)
         } else {
             clearSuperResolution()
         }
-    }
+        true
+    }.onFailure { throwable ->
+        Log.e(TAG, "setSuperResolution failed for index=$index", throwable)
+    }.getOrDefault(false)
 
     private val mpvEventObserver = object : MPVLib.EventObserver {
         override fun eventProperty(property: String) {

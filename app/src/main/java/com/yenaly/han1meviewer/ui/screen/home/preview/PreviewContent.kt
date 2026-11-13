@@ -47,11 +47,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.logic.exception.HanimeNotFoundException
 import com.yenaly.han1meviewer.logic.model.HanimePreview
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.pienization
+import com.yenaly.han1meviewer.ui.component.bottomNavReservedSpacing
 import com.yenaly.han1meviewer.ui.component.content.EmptyContent
 import com.yenaly.han1meviewer.ui.component.content.ErrorContent
 import com.yenaly.han1meviewer.ui.component.content.LoadingContent
@@ -115,7 +117,7 @@ fun PreviewContent(
                 FilledIconButton(onClick = {
                     onEvent(PreviewEvent.OnOpenComment(
                         uiState.currentDateLabel,
-                        uiState.monthHeaderState.dateCode
+                        uiState.routeState.currentDateCode
                     ))
                 }) {
                     BadgedBox(
@@ -249,9 +251,6 @@ fun PreviewContent(
     }
 }
 
-// 網站改版後搜索結果不再按月份區分，暫時隱藏月份切換按鈕。
-private const val SHOW_MONTH_SWITCH = false
-
 @Composable
 private fun PreviewHeaderSection(
     headerImageUrl: String?,
@@ -285,28 +284,20 @@ private fun PreviewHeaderSection(
                     )
                 )
         )
-        if (SHOW_MONTH_SWITCH) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                FilledTonalButton(
-                    onClick = onPrev,
-                    enabled = canPrev,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(prevLabel)
-                }
-                FilledTonalButton(
-                    onClick = onNext,
-                    enabled = canNext,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(nextLabel)
-                }
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(16.dp)
+                // 底部导航栏模式下抬升按钮，避免被悬浮导航栏遮挡
+                .padding(bottom = bottomNavReservedSpacing()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            FilledTonalButton(onClick = onPrev, enabled = canPrev, modifier = Modifier.weight(1f)) {
+                Text(prevLabel)
+            }
+            FilledTonalButton(onClick = onNext, enabled = canNext, modifier = Modifier.weight(1f)) {
+                Text(nextLabel)
             }
         }
     }

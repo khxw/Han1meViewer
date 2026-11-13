@@ -1,26 +1,32 @@
 package com.yenaly.han1meviewer.ui.component
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,10 +44,12 @@ fun SettingSwitchItem(
     enabled: Boolean = true,
 ) {
     val contentAlpha = if (enabled) 1f else 0.38f
+    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .pressScale(interactionSource)
+            .settingCard(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(enabled = enabled, interactionSource = interactionSource) { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -86,10 +94,12 @@ fun SettingNavigationItem(
     iconRes: Int? = null,
     enabled: Boolean = true,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
+            .pressScale(interactionSource)
+            .settingCard(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(enabled = enabled, interactionSource = interactionSource, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -137,7 +147,7 @@ fun SettingInfoItem(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .settingCard(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -192,7 +202,7 @@ fun SettingSliderItem(
     }
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .settingCard(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -221,25 +231,11 @@ fun SettingSliderItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        val sliderState = remember(valueRange, totalSteps) {
-            SliderState(
-                value = value.toFloat(),
-                steps = totalSteps.coerceAtLeast(0),
-                trackRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
-            )
-        }
-        LaunchedEffect(value) {
-            if (!sliderState.isDragging) {
-                sliderState.value = value.toFloat()
-            }
-        }
         Slider(
-            state = sliderState,
-            onValueChange = {
-                // SliderState 不会自动跟随手势，必须同步写入当前拖动位置。
-                sliderState.value = it
-                onValueChange(it.roundToInt())
-            },
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.roundToInt()) },
+            valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
+            steps = totalSteps.coerceAtLeast(0),
         )
     }
 }
@@ -254,7 +250,7 @@ fun SettingChoiceItem(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
+            .settingCard(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -291,6 +287,21 @@ fun SettingChoiceItem(
         }
     }
 }
+
+@Composable
+private fun Modifier.settingCard(
+    color: Color,
+    shape: Shape = RoundedCornerShape(16.dp),
+): Modifier = this
+    .padding(horizontal = 12.dp)
+    .fillMaxWidth()
+    .clip(shape)
+    .background(color)
+    .border(
+        width = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.42f),
+        shape = shape,
+    )
 
 @Preview(showBackground = true)
 @Composable

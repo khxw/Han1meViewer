@@ -5,6 +5,9 @@ import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.logic.dao.DownloadDatabase
 import com.yenaly.han1meviewer.logic.dao.HistoryDatabase
 import com.yenaly.han1meviewer.logic.dao.MiscellanyDatabase
+import com.yenaly.han1meviewer.logic.entity.ComicProgressEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteGroupEntity
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.HKeyframeHeader
 import com.yenaly.han1meviewer.logic.entity.HKeyframeType
@@ -14,7 +17,7 @@ import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.download.DownloadGroupEntity
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.model.SearchOption
-import com.yenaly.han1meviewer.util.applicationContext
+import com.yenaly.yenaly_libs.utils.applicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
@@ -186,6 +189,12 @@ object DatabaseRepo {
         fun loadAll() =
             watchHistoryDao.loadAll()
 
+        suspend fun getAll() =
+            watchHistoryDao.getAll()
+
+        fun loadContinueWatching(limit: Int = 10) =
+            watchHistoryDao.loadContinueWatching(limit)
+
         suspend fun delete(history: WatchHistoryEntity) =
             watchHistoryDao.delete(history)
 
@@ -198,17 +207,106 @@ object DatabaseRepo {
         suspend fun updateProgress(videoCode: String,progress: Long) =
             watchHistoryDao.updateProgress(videoCode, progress)
 
+        suspend fun updateProgress(videoCode: String, progress: Long, duration: Long) =
+            watchHistoryDao.updateProgress(videoCode, progress, duration)
+
+        suspend fun markCompleted(videoCode: String, duration: Long) =
+            watchHistoryDao.markCompleted(videoCode, duration)
+
+        suspend fun resetCompleted(videoCode: String) =
+            watchHistoryDao.resetCompleted(videoCode)
+
         suspend fun insert(history: WatchHistoryEntity) =
             watchHistoryDao.insertOrUpdate(history)
 
         suspend fun findBy(videoCode: String) =
             watchHistoryDao.findBy(videoCode)
 
-        suspend fun getWatched(resultList: List<String>) =
-            watchHistoryDao.getWatchedCodes(resultList)
+        /**
+         * 返回真正「已看」的视频编号。
+         *
+         * 以前直接查「历史表里有没有记录」，点开就算已看；现在按
+         * [com.yenaly.han1meviewer.logic.model.WatchProgress] 的统一规则过滤：
+         * 看完 或 进度 ≥ 90%。
+         */
+        suspend fun getWatched(resultList: List<String>): List<String> =
+            watchHistoryDao.findByVideoCodes(resultList)
+                .filter { it.isWatched }
+                .map { it.videoCode }
+    }
 
-        suspend fun markWatched(videoCode: String) =
-            watchHistoryDao.markWatched(videoCode)
+    object Favorite {
+        private val favoriteDao = HistoryDatabase.instance.favorite
+
+        fun loadAll() =
+            favoriteDao.loadAll()
+
+        suspend fun getAll() =
+            favoriteDao.getAll()
+
+        suspend fun findBy(videoCode: String) =
+            favoriteDao.findBy(videoCode)
+
+        suspend fun delete(favorite: FavoriteEntity) =
+            favoriteDao.delete(favorite)
+
+        suspend fun delete(videoCode: String) =
+            favoriteDao.findBy(videoCode)?.let { favoriteDao.delete(it) }
+
+        suspend fun deleteAll() =
+            favoriteDao.deleteAll()
+
+        suspend fun insert(favorite: FavoriteEntity) =
+            favoriteDao.insertOrUpdate(favorite)
+
+        suspend fun update(favorite: FavoriteEntity) =
+            favoriteDao.update(favorite)
+
+        /** 批量移动收藏到指定分组，groupId 为 null 表示移入未分组 */
+        suspend fun moveToGroup(ids: List<Int>, groupId: Int?) =
+            favoriteDao.updateGroupIds(ids, groupId)
+    }
+
+    /** 漫画阅读进度。 */
+    object ComicProgress {
+        private val dao = HistoryDatabase.instance.comicProgress
+
+        suspend fun getPage(comicId: String): Int =
+            dao.findBy(comicId)?.page ?: 0
+
+        suspend fun save(comicId: String, page: Int) =
+            dao.upsert(
+                ComicProgressEntity(
+                    comicId = comicId,
+                    page = page,
+                    updatedAt = System.currentTimeMillis(),
+                )
+            )
+    }
+
+    object FavoriteGroup {
+        private val favoriteGroupDao = HistoryDatabase.instance.favoriteGroup
+
+        fun loadAll() =
+            favoriteGroupDao.loadAll()
+
+        suspend fun getAll() =
+            favoriteGroupDao.getAll()
+
+        /** 创建分组并返回新分组 id */
+        suspend fun insert(name: String): Int {
+            val id = favoriteGroupDao.insert(
+                FavoriteGroupEntity(name = name, createdAt = System.currentTimeMillis())
+            )
+            return id.toInt()
+        }
+
+        suspend fun rename(group: FavoriteGroupEntity, name: String) =
+            favoriteGroupDao.update(group.copy(name = name))
+
+        /** 删除分组，组内收藏自动移入未分组 */
+        suspend fun deleteWithFavorites(group: FavoriteGroupEntity) =
+            favoriteGroupDao.deleteWithFavorites(group)
     }
 
     object HanimeDownload {
@@ -216,6 +314,9 @@ object DatabaseRepo {
         private val downloadGroupDao = DownloadDatabase.instance.downloadGroupDao
         fun loadAllDownloadingHanime() =
             hanimeDownloadDao.loadAllDownloadingHanime()
+
+        suspend fun getAll() =
+            hanimeDownloadDao.getAll()
 
         /**
          * 查询所有视频，并且每个视频要有当前他在的分类
@@ -263,14 +364,8 @@ object DatabaseRepo {
         suspend fun getGroupById(id: Int)=
             downloadGroupDao.getGroupById(id)
 
-        suspend fun findGroupByName(name: String)=
-            downloadGroupDao.getGroupByName(name)
-
         suspend fun updateVideoGroup(videoCode: String, newGroupId: Int)=
             hanimeDownloadDao.updateVideoGroup(videoCode, newGroupId)
-
-        suspend fun findGroupIdOfSeries(videoCodes: List<String>) =
-            hanimeDownloadDao.findGroupIdOfSeries(videoCodes)
 
         suspend fun createNewGroup(name: String): Long{
             val maxIndex = downloadGroupDao.getMaxOrderIndex() ?: 0

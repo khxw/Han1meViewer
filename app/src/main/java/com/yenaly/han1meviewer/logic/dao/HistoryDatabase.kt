@@ -7,10 +7,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.yenaly.han1meviewer.logic.entity.ComicProgressEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteEntity
+import com.yenaly.han1meviewer.logic.entity.FavoriteGroupEntity
 import com.yenaly.han1meviewer.logic.entity.HanimeAdvancedSearchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.SearchHistoryEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
-import com.yenaly.han1meviewer.util.applicationContext
+import com.yenaly.yenaly_libs.utils.applicationContext
 
 /**
  * @project Hanime1
@@ -20,8 +23,11 @@ import com.yenaly.han1meviewer.util.applicationContext
 @Database(
     entities = [SearchHistoryEntity::class,
         WatchHistoryEntity::class,
-        HanimeAdvancedSearchHistoryEntity::class],
-    version = 5, exportSchema = false
+        HanimeAdvancedSearchHistoryEntity::class,
+        FavoriteEntity::class,
+        FavoriteGroupEntity::class,
+        ComicProgressEntity::class],
+    version = 8, exportSchema = false
 )
 abstract class HistoryDatabase : RoomDatabase() {
 
@@ -30,6 +36,12 @@ abstract class HistoryDatabase : RoomDatabase() {
     abstract val watchHistory: WatchHistoryDao
 
     abstract val hanimeAdvancedSearchHistory: HanimeAdvancedSearchHistoryDao
+
+    abstract val favorite: FavoriteDao
+
+    abstract val favoriteGroup: FavoriteGroupDao
+
+    abstract val comicProgress: ComicProgressDao
 
     companion object {
         val instance by lazy {
@@ -41,8 +53,25 @@ abstract class HistoryDatabase : RoomDatabase() {
                 Migration1To2,
                 Migration2To3,
                 Migration3To4,
-                Migration4To5
+                Migration4To5,
+                Migration5To6,
+                Migration6To7,
+                Migration7To8
             ).build()
+        }
+    }
+
+    /** 新增漫画阅读进度表。 */
+    object Migration7To8 : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `ComicProgressEntity` (
+                    `comicId` TEXT NOT NULL,
+                    `page` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`comicId`)
+                )"""
+            )
         }
     }
 
@@ -102,10 +131,51 @@ abstract class HistoryDatabase : RoomDatabase() {
     }
     object Migration4To5 : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            // 增加「已看完」列，旧数据默认视为已看完以保留原有标记
+            // 新增本地收藏（离线收藏）表
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `FavoriteEntity` (
+                    `videoCode` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `coverUrl` TEXT NOT NULL,
+                    `releaseDate` INTEGER NOT NULL,
+                    `savedAt` INTEGER NOT NULL,
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+    object Migration5To6 : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // 新增本地收藏分组表
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `FavoriteGroupEntity` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            // 收藏表新增分组 id 列，旧收藏自动归为未分组
+            db.execSQL(
+                """ALTER TABLE FavoriteEntity
+                   ADD COLUMN groupId INTEGER"""
+            )
+        }
+    }
+
+    object Migration6To7 : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // 继续观看需要总时长计算百分比；完成状态用于播放结束后移出列表。
             db.execSQL(
                 """ALTER TABLE WatchHistoryEntity
-                   ADD COLUMN watched INTEGER NOT NULL DEFAULT 1"""
+                   ADD COLUMN duration INTEGER NOT NULL DEFAULT 0"""
+            )
+            db.execSQL(
+                """ALTER TABLE WatchHistoryEntity
+                   ADD COLUMN isCompleted INTEGER NOT NULL DEFAULT 0"""
             )
         }
     }

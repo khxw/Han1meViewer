@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,12 +23,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yenaly.han1meviewer.R
+import com.yenaly.han1meviewer.Preferences
+import com.yenaly.han1meviewer.logic.InteractionPreferences
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.ui.component.VideoCardItem
 import com.yenaly.han1meviewer.ui.component.lazy.LazyRow
 import com.yenaly.han1meviewer.ui.preview.ComponentPreview
 import com.yenaly.han1meviewer.ui.preview.fakeHomePageVideos
 import com.yenaly.han1meviewer.ui.screen.rememberCardResponsiveWidth
+import com.yenaly.han1meviewer.ui.screen.videoGridSpacing
 import com.yenaly.han1meviewer.ui.theme.SpacingLarge
 import com.yenaly.han1meviewer.ui.theme.SpacingNormal
 
@@ -75,18 +79,25 @@ fun CategoryRow(
             )
         }
 
-        val uniqueVideos = videos.distinctBy { it.videoCode }
+        val uniqueVideos = remember(videos) { videos.distinctBy { it.videoCode } }
         val (cardWidth, _) = rememberCardResponsiveWidth()
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(SpacingNormal),
-            contentPadding = PaddingValues(horizontal = SpacingLarge)
+            horizontalArrangement = Arrangement.spacedBy(videoGridSpacing),
+            contentPadding = PaddingValues(horizontal = if (Preferences.useCompactMode) SpacingNormal else SpacingLarge),
+            enableItemAnimation = false,
         ) {
-            items(uniqueVideos, key = { it.videoCode }) { video ->
+            items(
+                items = uniqueVideos,
+                key = { it.videoCode },
+                contentType = { "home_video_card" },
+            ) { video ->
                 VideoCardItem(
                     modifier = Modifier.width(cardWidth),
                     videoItem = video,
                     isHorizontalCard = true,
+                    isWatched = video.watched == true,
+                    enablePressScale = InteractionPreferences.pressScaleAnimationEnabled,
                     onClickVideosItem = onVideoClick,
                     onLongClickVideosItem = onVideoLongClick
                 )

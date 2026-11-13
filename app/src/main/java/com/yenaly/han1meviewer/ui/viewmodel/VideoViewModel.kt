@@ -17,7 +17,6 @@ import com.yenaly.han1meviewer.logic.DatabaseRepo
 import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.entity.HKeyframeEntity
 import com.yenaly.han1meviewer.logic.entity.WatchHistoryEntity
-import com.yenaly.han1meviewer.logic.entity.download.DownloadGroupEntity
 import com.yenaly.han1meviewer.logic.entity.download.HanimeDownloadEntity
 import com.yenaly.han1meviewer.logic.model.HanimeInfo
 import com.yenaly.han1meviewer.logic.model.HanimeVideo
@@ -25,24 +24,20 @@ import com.yenaly.han1meviewer.logic.state.VideoLoadingState
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.ui.viewmodel.AppViewModel.csrfToken
 import com.yenaly.han1meviewer.util.TagLocalizer
-import com.yenaly.han1meviewer.base.BaseViewModel
-import com.yenaly.han1meviewer.util.dp
+import com.yenaly.han1meviewer.util.markWatchedList
+import com.yenaly.yenaly_libs.base.YenalyViewModel
+import com.yenaly.yenaly_libs.utils.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -52,7 +47,7 @@ import kotlin.math.abs
  * @author Yenaly Liew
  * @time 2022/06/17 017 19:01
  */
-class VideoViewModel(application: Application) : BaseViewModel(application) {
+class VideoViewModel(application: Application) : YenalyViewModel(application) {
 
     data class IntroScrollState(
         val firstVisibleItemIndex: Int = 0,
@@ -63,6 +58,7 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
         val selectedTabIndex: Int = 0,
         val isAppBarExpanded: Boolean = true,
         val appBarBottomInsetPx: Int = 0,
+        val imeBottomInsetPx: Int = 0,
         val commentBadgeCount: Int = 0,
         val isScrollDisabled: Boolean = false,
         val isInPipMode: Boolean = false,
@@ -92,7 +88,7 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
 
     var fromDownload = false
 
-    // 相关影片在别处展示时（独立标签页开关开启，或平板横屏分栏布局），简介底部不显示相关列表
+    // 平板横屏模式下，左栏不显示相关视频（右栏已显示）
     var hideRelatedInIntro by mutableStateOf(false)
     var hKeyframes: HKeyframeEntity? = null
     private val _videoList = MutableLiveData<List<HanimeInfo>>()
@@ -105,40 +101,6 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
     val hanimeVideoFlow = _hanimeVideoFlow.asStateFlow()
     private val _videoHostUiStateFlow = MutableStateFlow(VideoHostUiState())
     val videoHostUiStateFlow = _videoHostUiStateFlow.asStateFlow()
-
-    /**
-     * 同系列影片已歸入的分組 id，作為下載時分組名的推薦項。
-     *
-     * 同系列任意一集在非預設分組中時推薦該分組，否則為 null。
-     */
-    val recommendedGroupId: StateFlow<Int?> =
-        hanimeVideoFlow
-            .map { video -> video?.playlist?.video?.map { it.videoCode }.orEmpty() }
-            .distinctUntilChanged()
-            .map { videoCodes ->
-                if (videoCodes.isEmpty()) null
-                else DatabaseRepo.HanimeDownload.findGroupIdOfSeries(videoCodes)
-            }
-            .flowOn(Dispatchers.IO)
-            .catch { e -> e.printStackTrace() }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = null,
-            )
-
-    /**
-     * 已下載分組列表，供下載時自動分組選擇（複用/挑選已有分組）使用。
-     */
-    val downloadGroups: StateFlow<List<DownloadGroupEntity>> =
-        DatabaseRepo.HanimeDownload.getAllGroups()
-            .flowOn(Dispatchers.IO)
-            .catch { e -> e.printStackTrace() }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList(),
-            )
 
     fun setVideoList(list: List<HanimeInfo>) {
         _videoList.value = list
@@ -189,6 +151,10 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
 
     fun setAppBarBottomInsetPx(appBarBottomInsetPx: Int) {
         _videoHostUiStateFlow.update { it.copy(appBarBottomInsetPx = appBarBottomInsetPx) }
+    }
+
+    fun setImeBottomInsetPx(imeBottomInsetPx: Int) {
+        _videoHostUiStateFlow.update { it.copy(imeBottomInsetPx = imeBottomInsetPx) }
     }
 
     fun setCommentBadgeCount(commentBadgeCount: Int) {
@@ -300,8 +266,13 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
                 }
                 _hanimeVideoStateFlow.value = emitState
                 if (emitState is VideoLoadingState.Success) {
-                    _hanimeVideoFlow.update { emitState.info }
-                    csrfToken = emitState.info.csrfToken
+                    val info = emitState.info
+                    val markedInfo = info.copy(
+                        relatedHanimes = markWatchedList(info.relatedHanimes),
+                        playlist = info.playlist?.copy(video = markWatchedList(info.playlist.video)),
+                    )
+                    _hanimeVideoFlow.update { markedInfo }
+                    csrfToken = markedInfo.csrfToken
                 }
             }
         }
@@ -372,7 +343,7 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    private val _modifyMyListFlow = MutableSharedFlow<WebsiteState<Unit>>()
+    private val _modifyMyListFlow = MutableSharedFlow<WebsiteState<Int>>()
     val modifyMyListFlow = _modifyMyListFlow.asSharedFlow()
 
     fun modifyMyList(
@@ -382,7 +353,7 @@ class VideoViewModel(application: Application) : BaseViewModel(application) {
         position: Int,
     ) {
         viewModelScope.launch {
-            NetworkRepo.addToMyList(listCode, videoCode, isChecked, csrfToken).collect {
+            NetworkRepo.addToMyList(listCode, videoCode, isChecked, position, csrfToken).collect {
                 _modifyMyListFlow.emit(it)
                 _hanimeVideoFlow.update { prev ->
                     val myList = prev?.myList?.myListInfo.orEmpty().toMutableList()

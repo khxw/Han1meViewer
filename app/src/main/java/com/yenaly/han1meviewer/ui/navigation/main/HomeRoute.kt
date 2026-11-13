@@ -15,13 +15,13 @@ import com.yenaly.han1meviewer.logic.entity.CheckInType
 import com.yenaly.han1meviewer.logic.model.Announcement
 import com.yenaly.han1meviewer.ui.activity.MainActivity
 import com.yenaly.han1meviewer.ui.screen.home.homepage.component.AnnouncementDialog
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
 import com.yenaly.han1meviewer.ui.component.TripleButtonDialog
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomePageScreen
 import com.yenaly.han1meviewer.ui.screen.home.homepage.HomeUiEvent
 import com.yenaly.han1meviewer.ui.screen.home.homepage.LocalSearchHistoryQuery
 import com.yenaly.han1meviewer.ui.viewmodel.CheckInCalendarViewModel
-import com.yenaly.han1meviewer.util.copyTextToClipboard
+import com.yenaly.yenaly_libs.utils.copyTextToClipboard
+import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
@@ -30,10 +30,13 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeRouteScreen(
     activity: MainActivity,
+    isDrawerOpen: Boolean,
+    onOpenDrawer: () -> Unit,
     onNavigateToPreview: () -> Unit,
+    onNavigateToRandomVideo: () -> Unit,
     onNavigateToSearch: (String?) -> Unit,
     onNavigateToSearchAdvanced: (Map<String, String>) -> Unit,
-    onNavigateToVideo: (String) -> Unit,
+    onNavigateToVideo: (String, Boolean) -> Unit,
 ) {
     val viewModel = activity.viewModel
     val checkInViewModel: CheckInCalendarViewModel = viewModel()
@@ -42,7 +45,6 @@ fun HomeRouteScreen(
     val doMore = stringResource(R.string.do_more)
     val checkoutExit = stringResource(R.string.checkout_exit)
     val exit = stringResource(R.string.exit)
-    val copied = stringResource(R.string.copy_to_clipboard)
     var showExitDialog by remember { mutableStateOf(false) }
     var announcement by remember { mutableStateOf<Announcement?>(null) }
     CompositionLocalProvider(
@@ -52,15 +54,18 @@ fun HomeRouteScreen(
     ) {
         HomePageScreen(
             viewModel = viewModel,
+            isDrawerOpen = isDrawerOpen,
             onEvent = { event ->
                 when (event) {
+                    is HomeUiEvent.OpenDrawer -> onOpenDrawer()
                     is HomeUiEvent.NavigateToPreview -> onNavigateToPreview()
+                    is HomeUiEvent.NavigateToRandomVideo -> onNavigateToRandomVideo()
                     is HomeUiEvent.OpenSearchPage -> onNavigateToSearch(event.query)
                     is HomeUiEvent.NavigateToSearchAdvanced -> onNavigateToSearchAdvanced(event.params)
-                    is HomeUiEvent.OpenVideo -> onNavigateToVideo(event.videoCode)
+                    is HomeUiEvent.OpenVideo -> onNavigateToVideo(event.videoCode, event.autoPlay)
                     is HomeUiEvent.LongPressVideoCopy -> {
                         copyTextToClipboard(getHanimeShareText(event.videoTitle, event.videoCode))
-                        GlobalToasts.show(copied, level = GlobalToasts.ToastLevel.INFO)
+                        showShortToast(R.string.copy_to_clipboard)
                     }
                     is HomeUiEvent.ShowAnnouncementDialog -> { announcement = event.announcement }
                     is HomeUiEvent.ShowExitDialog -> { showExitDialog = true }

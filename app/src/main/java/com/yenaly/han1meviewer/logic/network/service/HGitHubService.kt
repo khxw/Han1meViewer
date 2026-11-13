@@ -8,6 +8,7 @@ import com.yenaly.han1meviewer.logic.network.HUpdater
 import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Streaming
@@ -19,15 +20,19 @@ import retrofit2.http.Url
  * @time 2022/09/09 009 20:04
  */
 interface HGitHubService {
-    /**
-     * 最新 Release。
-     *
-     * 返回[Response]而非实体类型是刻意为之：只有拿到[Response]才能读取状态码、错误响应体
-     * 与 `x-ratelimit-*` 响应头，从而区分「限额耗尽 / Token 失效 / 权限不足 / 服务端故障」
-     * 并给出对应提示。
-     */
     @GET("releases/latest")
-    suspend fun getLatestVersion(): Response<Release>
+    suspend fun getLatestVersion(): Release
+
+    /**
+     * 通过 GitHub Contents API 直接获取仓库根目录的 announcements.json 原文。
+     *
+     * 相比 raw.githubusercontent.com，走 api.github.com（应用已用固定 IP 的
+     * [GitHubDns][com.yenaly.han1meviewer.logic.network.GitHubDns] 可靠连通，检查更新即走此通道），
+     * 在受限网络下更稳。Accept: application/vnd.github.raw 让响应体即为文件原文。
+     */
+    @Headers("Accept: application/vnd.github.raw")
+    @GET("contents/announcements.json")
+    suspend fun getAnnouncements(): Response<ResponseBody>
 
     /**
      * What is Workflow Runs?
@@ -39,7 +44,7 @@ interface HGitHubService {
     @GET("actions/workflows/ci.yml/runs?event=push&status=success&per_page=1")
     suspend fun getWorkflowRuns(
         @Query("branch") branch: String = HUpdater.DEFAULT_BRANCH,
-    ): Response<WorkflowRuns>
+    ): WorkflowRuns
 
     /**
      * What is Commit Comparison?
@@ -51,7 +56,7 @@ interface HGitHubService {
     suspend fun getCommitComparison(
         @Path("curSha") curSha: String,
         @Path("latestSha") latestSha: String,
-    ): Response<CommitComparison>
+    ): CommitComparison
 
     /**
      * What is Artifacts?
@@ -62,14 +67,10 @@ interface HGitHubService {
     @GET
     suspend fun getArtifacts(
         @Url url: String,
-    ): Response<Artifacts>
+    ): Artifacts
 
     /**
      * Typical request
-     *
-     * 下载更新包专用。调用方必须先检查[Response.isSuccessful]：非 2xx 时
-     * [Response.errorBody] 里是 GitHub 的错误 JSON，直接写进文件会得到
-     * 一个「能存下来但装不上」的假安装包。
      */
     @GET
     @Streaming

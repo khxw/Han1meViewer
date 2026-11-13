@@ -1,7 +1,10 @@
 package com.yenaly.han1meviewer.ui.activity
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -10,6 +13,8 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
@@ -17,25 +22,33 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.lifecycleScope
-import com.yenaly.han1meviewer.HANIME_LOGIN_URL
-import com.yenaly.han1meviewer.HanimeConstants.HANIME_URL
+import androidx.preference.PreferenceManager
+import com.yenaly.han1meviewer.Preferences
 import com.yenaly.han1meviewer.R
 import com.yenaly.han1meviewer.USER_AGENT
-import com.yenaly.han1meviewer.base.BaseActivity
 import com.yenaly.han1meviewer.logic.NetworkRepo
 import com.yenaly.han1meviewer.logic.state.WebsiteState
 import com.yenaly.han1meviewer.login
 import com.yenaly.han1meviewer.ui.screen.login.LoginDialog
 import com.yenaly.han1meviewer.ui.screen.login.LoginScreen
 import com.yenaly.han1meviewer.ui.theme.HanimeTheme
-import com.yenaly.han1meviewer.ui.component.GlobalToasts
+import com.yenaly.han1meviewer.util.hasHanimeLoginSession
+import com.yenaly.yenaly_libs.base.frame.FrameActivity
+import com.yenaly.yenaly_libs.utils.showShortToast
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.Locale
 
-class LoginActivity : BaseActivity() {
+class LoginActivity : FrameActivity() {
     private lateinit var scannerLauncher: ActivityResultLauncher<Intent>
     private var isRefreshing by mutableStateOf(true)
     private var showLoginDialog by mutableStateOf(false)
     private var isLoggingIn by mutableStateOf(false)
+    private var loginCompleted = false
+
+    override fun setUiStyle() {
+        enableEdgeToEdge()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +58,7 @@ class LoginActivity : BaseActivity() {
             if (isGranted) {
                 scannerLauncher.launch(Intent(this, ManualInputCookiesActivity::class.java))
             } else {
-                GlobalToasts.show(getString(R.string.request_camera), level = GlobalToasts.ToastLevel.WARNING)
+                Toast.makeText(this, getString(R.string.request_camera), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -75,7 +88,7 @@ class LoginActivity : BaseActivity() {
                 LoginScreen(
                     isRefreshing = isRefreshing,
                     onBack = { onBackPressedDispatcher.onBackPressed() },
-                    onRefresh = { webView?.loadUrl(HANIME_LOGIN_URL) },
+                    onRefresh = { webView?.loadUrl(loginPageUrl()) },
                     onShowLoginDialog = { showLoginDialog = true },
                     onOpenQrScanner = { openQrScanner() },
                     webViewFactory = { createWebView() },
@@ -90,29 +103,32 @@ class LoginActivity : BaseActivity() {
     private fun createWebView(): WebView {
         return WebView(this).apply {
             webView = this
-            CookieManager.getInstance().removeAllCookies(null)
-            CookieManager.getInstance().flush()
+            val wv = this
+            CookieManager.getInstance().apply {
+                setAcceptCookie(true)
+                setAcceptThirdPartyCookies(wv, true)
+            }
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.userAgentString = USER_AGENT
 
             webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    tryCompleteLoginFromWebView(url)
+                }
+
                 override fun onPageFinished(view: WebView, url: String) {
                     isRefreshing = false
+                    tryCompleteLoginFromWebView(url)
                 }
 
                 override fun shouldOverrideUrlLoading(
                     view: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
-                    val isSameUrl = HANIME_URL.contains(request.url.toString())
-                    if (request.isRedirect && isSameUrl) {
-                        val url = request.url
-                        val cookieManager = CookieManager.getInstance().getCookie(url.host)
-                        Log.d("login_cookie", cookieManager.toString())
-                        login(cookieManager)
-                        setResult(RESULT_OK)
-                        finish()
+                    if (request.isForMainFrame &&
+                        tryCompleteLoginFromWebView(request.url.toString())
+                    ) {
                         return true
                     }
                     return super.shouldOverrideUrlLoading(view, request)
@@ -129,8 +145,36 @@ class LoginActivity : BaseActivity() {
                     }
                 }
             }
-            loadUrl(HANIME_LOGIN_URL)
+            loadUrl(loginPageUrl())
         }
+    }
+
+    private fun loginPageUrl(): String = Preferences.baseUrl.trimEnd('/') + "/login"
+
+    private fun tryCompleteLoginFromWebView(url: String?): Boolean {
+        if (loginCompleted) return true
+        val target = url?.toHttpUrlOrNull() ?: return false
+        val baseHost = Preferences.baseUrl.toHttpUrlOrNull()?.host ?: return false
+        if (target.host != baseHost) return false
+
+        val path = target.encodedPath
+        val isHome = path == "/" || path.isBlank()
+        val isUserPage = path.startsWith("/user/")
+        if (!isHome && !isUserPage) return false
+
+        val cookies = CookieManager.getInstance().getCookie(target.toString()).orEmpty()
+        if (cookies.isBlank()) return false
+        // Login redirects to /user/<id>/edit. The session cookie may be HttpOnly,
+        // so the protected user page is also accepted as proof of a successful login.
+        if (!cookies.hasHanimeLoginSession() && !isUserPage) return false
+
+        loginCompleted = true
+        login(cookies)
+        CookieManager.getInstance().flush()
+        setResult(RESULT_OK)
+        showLoginDialog = false
+        finish()
+        return true
     }
 
     private fun openQrScanner() {
@@ -162,9 +206,9 @@ class LoginActivity : BaseActivity() {
                         isLoggingIn = false
                         state.throwable.printStackTrace()
                         if (state.throwable is IllegalStateException) {
-                            GlobalToasts.show(getString(R.string.account_or_password_wrong), level = GlobalToasts.ToastLevel.ERROR)
+                            showShortToast(R.string.account_or_password_wrong)
                         } else {
-                            GlobalToasts.show(getString(R.string.login_failed), level = GlobalToasts.ToastLevel.ERROR)
+                            showShortToast(R.string.login_failed)
                         }
                     }
 
@@ -172,11 +216,34 @@ class LoginActivity : BaseActivity() {
                         login(state.info)
                         setResult(RESULT_OK)
                         showLoginDialog = false
-                        GlobalToasts.show(getString(R.string.login_success), level = GlobalToasts.ToastLevel.SUCCESS)
+                        showShortToast(R.string.login_success)
                         finish()
                     }
                 }
             }
         }
+    }
+
+    private fun applyAppLocale(context: Context): Context {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val lang = prefs.getString("app_language", "system") ?: "system"
+
+        val newLocale = when (lang) {
+            "zh-rCN" -> Locale.SIMPLIFIED_CHINESE
+            "zh" -> Locale.TRADITIONAL_CHINESE
+            "en" -> Locale.ENGLISH
+            "ja" -> Locale.JAPANESE
+            else -> Resources.getSystem().configuration.locales.get(0)
+        }
+
+        Locale.setDefault(newLocale)
+
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(newLocale)
+        return context.createConfigurationContext(config)
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(applyAppLocale(newBase))
     }
 }

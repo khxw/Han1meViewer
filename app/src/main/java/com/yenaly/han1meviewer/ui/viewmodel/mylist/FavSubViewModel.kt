@@ -28,7 +28,7 @@ class FavSubViewModel(application: Application) : MyListSubViewModel(application
     private val _deleteMyFavVideoFlow = MutableSharedFlow<WebsiteState<Boolean>>()
     val deleteMyFavVideoFlow = _deleteMyFavVideoFlow.asSharedFlow()
 
-    fun deleteMyFavVideo(videoCode: String) {
+    fun deleteMyFavVideo(videoCode: String, position: Int) {
         deleteItem(
             deleteCall = {
                 NetworkRepo.addToMyFavVideo(
@@ -39,7 +39,7 @@ class FavSubViewModel(application: Application) : MyListSubViewModel(application
                 )
             },
             emitTo = _deleteMyFavVideoFlow,
-            identifier = videoCode,
+            position = position,
             mapState = { it },
         )
     }
