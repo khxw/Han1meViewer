@@ -76,7 +76,7 @@ const val HA1_GITHUB_RELEASES_URL = "$HA1_GITHUB_URL/releases"
 
 const val HA1_GITHUB_API_URL = "https://api.github.com/repos/khxw/Han1meViewer/"
 
-const val HA1_ANNOUNCEMENTS_REF = "codex/remastered-2.1.150"
+const val HA1_ANNOUNCEMENTS_REF = "main"
 
 const val GITHUB_UPDATE_MIRROR = "https://gh-proxy.com/"
 

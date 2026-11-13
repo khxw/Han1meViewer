@@ -103,7 +103,7 @@ Han1meViewer 是一个使用 Kotlin 开发的 Android 客户端，用于浏览�
 维护步骤：
 
 1. 编辑本仓库根目录的 [`announcements.json`](announcements.json) 并推送到 `HA1_ANNOUNCEMENTS_REF` 指向的分支。
-2. 当前公告分支为 `codex/remastered-2.1.150`；切换或合并维护分支后，需要同步更新 `HA1_ANNOUNCEMENTS_REF`。
+2. 当前公告分支为 `main`；公告与源码统一使用默认维护分支。
 3. 过期或不再需要显示的公告建议将 `isActive` 置为 `false` 下线，而不是直接删除，便于回溯。
 
 公告字段说明：

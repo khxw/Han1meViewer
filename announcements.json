@@ -1,10 +1,10 @@
 [
   {
-    "title": "Han1meViewer 重制版 v2.1.152 更新公告",
-    "content": "本次更新内容：\n1. 移除 CI 更新通道，应用内更新检查仅保留 GitHub Release；\n2. Release APK 下载继续优先使用 gh-proxy.com 镜像，失败时回退 GitHub 原地址；\n3. 修复网站头像结构变化导致账号页显示加载失败的问题；\n4. 网络诊断合并网络与热点检查，并优化 403、429、5xx、VPN、TLS/SNI 等诊断结论。\n仓库：https://github.com/khxw/Han1meViewer",
+    "title": "Han1meViewer 重制版 v2.1.155 更新公告",
+    "content": "本次更新内容：\n1. 源码、公告和发布维护分支统一至 main；\n2. 重新启用软件内更新功能，应用内更新只检查 GitHub Release；\n3. 新增“使用更新镜像”开关，默认开启；开启时优先使用 gh-proxy.com，失败后回退 GitHub 原地址，关闭后只使用 GitHub；\n4. 优化启动时自动检查更新，避免阻塞启动和重复请求。\n仓库：https://github.com/khxw/Han1meViewer",
     "positiveText": "前往仓库",
     "negativeText": "知道了",
-    "timestamp": 1794555958,
+    "timestamp": 1794558821,
     "priority": 0,
     "imageUrl": null,
     "isActive": true,
