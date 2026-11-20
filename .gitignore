@@ -81,3 +81,6 @@ Thumbs.db
 /当前版本号：*
 /整理日期：*
 /develop
+
+# Local maintenance notes must never be pushed
+/docs/CONVERSATION_MEMORY.md
