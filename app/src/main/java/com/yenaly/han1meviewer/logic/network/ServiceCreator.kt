@@ -84,6 +84,8 @@ object ServiceCreator {
     fun rebuildOkHttpClient() {
         hClient = buildHClient()
         getchuClient = buildGetchuClient()
+        downloadClient = buildDownloadClient()
+        updateClient = buildUpdateClient()
     }
 
     fun updateDownloadSpeedLimit() {

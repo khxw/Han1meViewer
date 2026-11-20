@@ -22,7 +22,6 @@ import kotlin.time.ExperimentalTime
 
 object Preferences {
     private const val USAGE_NOTICE_ACCEPTED = "usage_notice_accepted"
-
     /** 是否已经询问过"首次启动自动开启内置 Hosts"，无论用户同意还是拒绝都置为 true。 */
     private const val HOSTS_AUTO_PROMPT_SHOWN = "hosts_auto_prompt_shown"
 

@@ -36,4 +36,24 @@
     <string name="network_diagnostics_conclusion_main_server_error">主站回傳 HTTP %1$d，伺服器或 Cloudflare 目前出現異常。</string>
     <string name="network_diagnostics_suggest_main_server_error">建議：稍後重試，並確認站點服務狀態。</string>
     <string name="network_diagnostics_conclusion_main_http_error">主站回傳 HTTP %1$d，網路已到達伺服器，但首頁回應異常。</string>
+    <string name="network_diagnostics_carrier">電信業者</string>
+    <string name="network_diagnostics_carrier_format">電信業者：%1$s</string>
+    <string name="network_diagnostics_carrier_unknown">未識別</string>
+    <string name="network_diagnostics_carrier_wifi_not_applicable">Wi‑Fi 不適用</string>
+    <string name="network_diagnostics_completed">診斷完成</string>
+    <string name="network_diagnostics_result_ready">準備檢查</string>
+    <string name="network_diagnostics_result_running">正在檢查網路</string>
+    <string name="network_diagnostics_result_ok">網路連線正常</string>
+    <string name="network_diagnostics_result_warn">部分項目需注意</string>
+    <string name="network_diagnostics_result_fail">網路檢查有異常</string>
+    <string name="network_diagnostics_status_pass">正常</string>
+    <string name="network_diagnostics_status_warn">注意</string>
+    <string name="network_diagnostics_status_fail">需檢查</string>
+    <string name="network_diagnostics_status_running">檢查中</string>
+    <string name="network_diagnostics_status_skipped">未檢查</string>
+    <string name="network_diagnostics_status_pending">等待中</string>
+    <string name="network_diagnostics_item_count">共 %1$d 項</string>
+    <string name="network_diagnostics_actions_title">可以試試</string>
+    <string name="network_diagnostics_export_logs">匯出日誌</string>
+    <string name="network_diagnostics_run_again">重新診斷</string>
 </resources>

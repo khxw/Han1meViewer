@@ -80,6 +80,10 @@ const val HA1_ANNOUNCEMENTS_REF = "main"
 
 const val GITHUB_UPDATE_MIRROR = "https://gh-proxy.org/"
 const val GITHUB_UPDATE_MIRROR_COMPAT = "https://gh-proxy.com/"
+const val GITHUB_UPDATE_MIRROR_GH_PROXY_CN = "https://ghproxy.cn/"
+const val GITHUB_UPDATE_MIRROR_GH_PROXY_NET = "https://gh-proxy.net/"
+const val GITHUB_UPDATE_MIRROR_GHFAST = "https://ghfast.top/"
+const val GITHUB_UPDATE_MIRROR_GH_PROXY_NET_COMPAT = "https://ghproxy.net/"
 
 /**
  * 重制版自托管公告源（仓库根目录的 announcements.json，通过 raw CDN 拉取）。

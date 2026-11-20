@@ -1,8 +1,10 @@
 package com.yenaly.han1meviewer.ui.viewmodel
 
+import android.annotation.SuppressLint
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.NetworkCapabilities
+import android.telephony.TelephonyManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yenaly.han1meviewer.Preferences
@@ -48,6 +50,8 @@ data class NetworkDiagnosticsUiState(
     val items: List<NetworkCheckItem> = emptyList(),
     val isRunning: Boolean = false,
     val started: Boolean = false,
+    val networkTransport: String? = null,
+    val carrierLabel: String? = null,
     val conclusion: String? = null,
     val suggestion: String? = null,
 )
@@ -105,6 +109,12 @@ class NetworkDiagnosticsViewModel : ViewModel() {
             updateItem(ID_NETWORK_ENVIRONMENT, NetworkCheckStatus.RUNNING)
             val environment = inspectNetworkEnvironment()
             applyItem(environment.item)
+            _uiState.update {
+                it.copy(
+                    networkTransport = environment.networkTransport,
+                    carrierLabel = environment.carrierLabel,
+                )
+            }
             hotspotSuspected = environment.hotspotSuspected
             networkAvailable = environment.networkAvailable
             networkValidated = environment.networkValidated
@@ -198,6 +208,7 @@ class NetworkDiagnosticsViewModel : ViewModel() {
         val metered = runCatching { manager.isActiveNetworkMetered }.getOrDefault(false)
         val vpnActive = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
         val isWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val isCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
         val gateway = if (isWifi) linkProperties?.defaultGateway() else null
         val dnsServers = if (isWifi) {
             linkProperties?.dnsServers?.mapNotNull { it.hostAddress }.orEmpty()
@@ -206,6 +217,13 @@ class NetworkDiagnosticsViewModel : ViewModel() {
         }
         val likelyHotspot = isWifi &&
             NetworkEnvironmentInspector.isLikelyHotspot(gateway, dnsServers)
+        val networkTransport = transportLabels.joinToString(" + ")
+        val carrierLabel = when {
+            isCellular && !isWifi ->
+                detectCarrierName() ?: getString(R.string.network_diagnostics_carrier_unknown)
+            isWifi -> getString(R.string.network_diagnostics_carrier_wifi_not_applicable)
+            else -> getString(R.string.network_diagnostics_carrier_unknown)
+        }
         val environmentItem = item(
             id = ID_NETWORK_ENVIRONMENT,
             status = when {
@@ -235,6 +253,8 @@ class NetworkDiagnosticsViewModel : ViewModel() {
                         }
                     )
                 )
+                appendLine()
+                append(getString(R.string.network_diagnostics_carrier_format, carrierLabel))
                 appendLine()
                 if (!isWifi) {
                     append(getString(R.string.network_diagnostics_hotspot_not_wifi))
@@ -270,6 +290,8 @@ class NetworkDiagnosticsViewModel : ViewModel() {
         )
         return NetworkEnvironmentResult(
             item = environmentItem,
+            networkTransport = networkTransport,
+            carrierLabel = carrierLabel,
             hotspotSuspected = likelyHotspot,
             networkAvailable = hasInternet,
             networkValidated = validated,
@@ -283,6 +305,8 @@ class NetworkDiagnosticsViewModel : ViewModel() {
             status = NetworkCheckStatus.FAIL,
             detail = getString(R.string.network_diagnostics_transport_none),
         ),
+        networkTransport = getString(R.string.network_diagnostics_transport_none),
+        carrierLabel = getString(R.string.network_diagnostics_carrier_unknown),
         hotspotSuspected = false,
         networkAvailable = false,
         networkValidated = false,
@@ -294,11 +318,32 @@ class NetworkDiagnosticsViewModel : ViewModel() {
 
     private data class NetworkEnvironmentResult(
         val item: NetworkCheckItem,
+        val networkTransport: String,
+        val carrierLabel: String,
         val hotspotSuspected: Boolean,
         val networkAvailable: Boolean,
         val networkValidated: Boolean,
         val vpnActive: Boolean,
     )
+
+    @SuppressLint("MissingPermission")
+    private fun detectCarrierName(): String? {
+        val telephony = applicationContext.getSystemService(TelephonyManager::class.java)
+            ?: return null
+        val operatorName = runCatching { telephony.networkOperatorName }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: runCatching { telephony.simOperatorName }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+        val operatorNumeric = runCatching { telephony.networkOperator }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: runCatching { telephony.simOperator }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+        return NetworkEnvironmentInspector.resolveCarrierName(operatorName, operatorNumeric)
+    }
 
     private suspend fun checkSystemDns(host: String): NetworkCheckItem {
         val start = System.currentTimeMillis()

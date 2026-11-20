@@ -9,10 +9,12 @@ import androidx.core.app.NotificationManagerCompat
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.video.VideoFrameDecoder
 import com.google.android.material.color.DynamicColors
 import com.yenaly.han1meviewer.logic.log.HLumberjack
 import com.yenaly.han1meviewer.logic.network.HProxySelector
+import com.yenaly.han1meviewer.logic.network.ServiceCreator
 import com.yenaly.han1meviewer.util.AnimeShaders
 import com.yenaly.han1meviewer.util.ThemeUtils
 import com.yenaly.yenaly_libs.base.YenalyApplication
@@ -39,7 +41,10 @@ class HanimeApplication : YenalyApplication(), SingletonImageLoader.Factory {
 
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
-            .components { add(VideoFrameDecoder.Factory()) }
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { ServiceCreator.hClient }))
+                add(VideoFrameDecoder.Factory())
+            }
             .build()
 
     override fun onCreate() {

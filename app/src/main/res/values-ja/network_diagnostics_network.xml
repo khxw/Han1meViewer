@@ -36,4 +36,24 @@
     <string name="network_diagnostics_conclusion_main_server_error">本体サイトが HTTP %1$d を返しました。サーバーまたは Cloudflare に現在問題があります。</string>
     <string name="network_diagnostics_suggest_main_server_error">提案：しばらくしてから再試行し、サイトの稼働状況を確認してください。</string>
     <string name="network_diagnostics_conclusion_main_http_error">本体サイトが HTTP %1$d を返しました。サーバーには到達していますが、トップページの応答が異常です。</string>
+    <string name="network_diagnostics_carrier">通信事業者</string>
+    <string name="network_diagnostics_carrier_format">通信事業者：%1$s</string>
+    <string name="network_diagnostics_carrier_unknown">判別できません</string>
+    <string name="network_diagnostics_carrier_wifi_not_applicable">Wi‑Fi では対象外</string>
+    <string name="network_diagnostics_completed">診断完了</string>
+    <string name="network_diagnostics_result_ready">診断できます</string>
+    <string name="network_diagnostics_result_running">ネットワークを確認中</string>
+    <string name="network_diagnostics_result_ok">ネットワークは正常です</string>
+    <string name="network_diagnostics_result_warn">一部の項目に注意が必要です</string>
+    <string name="network_diagnostics_result_fail">ネットワーク検査で問題が見つかりました</string>
+    <string name="network_diagnostics_status_pass">正常</string>
+    <string name="network_diagnostics_status_warn">注意</string>
+    <string name="network_diagnostics_status_fail">要確認</string>
+    <string name="network_diagnostics_status_running">確認中</string>
+    <string name="network_diagnostics_status_skipped">未確認</string>
+    <string name="network_diagnostics_status_pending">待機中</string>
+    <string name="network_diagnostics_item_count">全 %1$d 項目</string>
+    <string name="network_diagnostics_actions_title">試すこと</string>
+    <string name="network_diagnostics_export_logs">ログを出力</string>
+    <string name="network_diagnostics_run_again">再診断</string>
 </resources>

@@ -84,3 +84,7 @@ Thumbs.db
 
 # Local maintenance notes must never be pushed
 /docs/CONVERSATION_MEMORY.md
+
+# Local design and planning artifacts
+/docs/mockups/
+/docs/superpowers/

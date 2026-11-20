@@ -22,21 +22,17 @@ class HUpdaterMirrorTest {
 
     @Test
     fun existingMirrorUrlIsNotDoublePrefixed() {
-        val mirrorUrl = GITHUB_UPDATE_MIRROR_COMPAT +
+        val mirrorUrl = GITHUB_UPDATE_MIRRORS.last() +
             "https://github.com/khxw/Han1meViewer/releases/download/v2.1.151/app.apk"
         assertEquals(mirrorUrl, mirrorUrl.toGitHubUpdateMirrorUrl())
     }
 
     @Test
-    fun mirrorEnabledUsesPrimaryThenCompatThenGithubFallback() {
+    fun mirrorEnabledUsesAllMirrorsThenGithubFallback() {
         val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.156/app.apk"
 
         assertEquals(
-            listOf(
-                GITHUB_UPDATE_MIRROR + direct,
-                GITHUB_UPDATE_MIRROR_COMPAT + direct,
-                direct,
-            ),
+            GITHUB_UPDATE_MIRRORS.map { it + direct } + direct,
             buildUpdateDownloadCandidates(direct, useMirror = true),
         )
     }
@@ -44,7 +40,7 @@ class HUpdaterMirrorTest {
     @Test
     fun mirrorDisabledUsesOnlyGithub() {
         val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.153/app.apk"
-        val mirror = GITHUB_UPDATE_MIRROR_COMPAT + direct
+        val mirror = GITHUB_UPDATE_MIRRORS.last() + direct
 
         assertEquals(
             listOf(direct),
@@ -64,5 +60,17 @@ class HUpdaterMirrorTest {
             listOf(apiUrl),
             buildUpdateDownloadCandidates(apiUrl, useMirror = true),
         )
+    }
+
+    @Test
+    fun everyMirrorPrefixIsNormalizedToGithub() {
+        val direct = "https://github.com/khxw/Han1meViewer/releases/download/v2.1.171/app.apk"
+
+        GITHUB_UPDATE_MIRRORS.forEach { prefix ->
+            assertEquals(
+                listOf(direct),
+                buildUpdateDownloadCandidates(prefix + direct, useMirror = false),
+            )
+        }
     }
 }

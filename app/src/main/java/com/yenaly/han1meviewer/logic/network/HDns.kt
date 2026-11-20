@@ -144,7 +144,7 @@ class HDns(
          * hanime1 系列域名托管于 Cloudflare，权威解析结果必在 Cloudflare 网段内；
          * 其余网段（含 IPv6）均为 DNS 投毒结果，予以剔除。
          */
-        private fun isCloudflareAddress(address: InetAddress): Boolean {
+        internal fun isCloudflareAddress(address: InetAddress): Boolean {
             val host = address.hostAddress ?: return false
             if (address is Inet6Address) {
                 // Cloudflare IPv6 网段 2606:4700::/32

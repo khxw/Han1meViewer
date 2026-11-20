@@ -74,6 +74,9 @@ class HProxySelector : ProxySelector() {
     }
 
     override fun select(uri: URI?): MutableList<Proxy> {
+        if (uri?.host?.isLoopbackHost() == true) {
+            return mutableListOf(Proxy.NO_PROXY)
+        }
         val type = Preferences.proxyType
         if (type == TYPE_HTTP || type == TYPE_SOCKS) {
             val ip = Preferences.proxyIp
@@ -96,4 +99,9 @@ class HProxySelector : ProxySelector() {
     override fun connectFailed(uri: URI?, sa: SocketAddress?, ioe: IOException?) {
         delegation?.select(uri)
     }
+
+    private fun String.isLoopbackHost(): Boolean =
+        equals("localhost", ignoreCase = true) ||
+            this == "127.0.0.1" ||
+            this == "::1"
 }

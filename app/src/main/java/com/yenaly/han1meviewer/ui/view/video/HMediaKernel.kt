@@ -600,6 +600,9 @@ class MpvMediaKernel(jzvd: Jzvd) : JZMediaInterface(jzvd) {
             put("tls-verify", if (Preferences.mpvTlsVerify) "no" else "yes")  // 是否证书验证 yes、no
 
             // 单独为MPV播放器配置代理，因为它不走ProxySelector，也不支持socks代理，沟槽的非原生实现
+            val currentVideoUrl = runCatching {
+                jzvd.jzDataSource.currentUrl.toString()
+            }.getOrNull()
             val proxyIp = Preferences.proxyIp
             val proxyPort = Preferences.proxyPort
             if (proxyIp.isNotBlank() && proxyPort != -1) {

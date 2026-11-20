@@ -36,4 +36,24 @@
     <string name="network_diagnostics_conclusion_main_server_error">The main site returned HTTP %1$d; the server or Cloudflare is currently having problems.</string>
     <string name="network_diagnostics_suggest_main_server_error">Suggestion: retry later and check the site service status.</string>
     <string name="network_diagnostics_conclusion_main_http_error">The main site returned HTTP %1$d. The server was reached, but its home-page response is abnormal.</string>
+    <string name="network_diagnostics_carrier">Carrier</string>
+    <string name="network_diagnostics_carrier_format">Carrier: %1$s</string>
+    <string name="network_diagnostics_carrier_unknown">Unknown</string>
+    <string name="network_diagnostics_carrier_wifi_not_applicable">Not applicable on Wi‑Fi</string>
+    <string name="network_diagnostics_completed">Diagnostics complete</string>
+    <string name="network_diagnostics_result_ready">Ready to check</string>
+    <string name="network_diagnostics_result_running">Checking network</string>
+    <string name="network_diagnostics_result_ok">Network looks normal</string>
+    <string name="network_diagnostics_result_warn">Some checks need attention</string>
+    <string name="network_diagnostics_result_fail">Network check found issues</string>
+    <string name="network_diagnostics_status_pass">OK</string>
+    <string name="network_diagnostics_status_warn">Notice</string>
+    <string name="network_diagnostics_status_fail">Needs review</string>
+    <string name="network_diagnostics_status_running">Checking</string>
+    <string name="network_diagnostics_status_skipped">Skipped</string>
+    <string name="network_diagnostics_status_pending">Pending</string>
+    <string name="network_diagnostics_item_count">%1$d checks</string>
+    <string name="network_diagnostics_actions_title">Try this</string>
+    <string name="network_diagnostics_export_logs">Export logs</string>
+    <string name="network_diagnostics_run_again">Run again</string>
 </resources>

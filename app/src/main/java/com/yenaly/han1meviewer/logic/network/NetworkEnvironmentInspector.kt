@@ -2,6 +2,21 @@ package com.yenaly.han1meviewer.logic.network
 
 object NetworkEnvironmentInspector {
 
+    private val mainlandCarrierNames = mapOf(
+        "46000" to "中国移动",
+        "46002" to "中国移动",
+        "46004" to "中国移动",
+        "46007" to "中国移动",
+        "46008" to "中国移动",
+        "46001" to "中国联通",
+        "46006" to "中国联通",
+        "46009" to "中国联通",
+        "46003" to "中国电信",
+        "46005" to "中国电信",
+        "46011" to "中国电信",
+        "46015" to "中国广电",
+    )
+
     private val commonHotspotGateways = setOf(
         "192.168.42.1",
         "192.168.43.1",
@@ -28,5 +43,13 @@ object NetworkEnvironmentInspector {
                 address.startsWith("192.168.137.") ||
                 address.startsWith("192.168.232.")
         }
+    }
+
+    fun resolveCarrierName(operatorName: String?, operatorNumeric: String?): String? {
+        val mapped = operatorNumeric
+            ?.trim()
+            ?.take(5)
+            ?.let(mainlandCarrierNames::get)
+        return mapped ?: operatorName?.trim()?.takeIf { it.isNotEmpty() }
     }
 }

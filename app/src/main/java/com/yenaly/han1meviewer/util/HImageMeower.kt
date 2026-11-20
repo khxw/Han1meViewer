@@ -9,6 +9,7 @@ import coil.request.ImageRequest
 import coil.request.ImageResult
 import com.yenaly.yenaly_libs.utils.applicationContext
 import com.yenaly.han1meviewer.logic.network.HDns
+import com.yenaly.han1meviewer.logic.network.HProxySelector
 import okhttp3.OkHttpClient
 import java.lang.ref.WeakReference
 import java.util.concurrent.TimeUnit
@@ -21,6 +22,7 @@ object HImageMeower {
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(5, TimeUnit.SECONDS)
         .dns(HDns())
+        .proxySelector(HProxySelector())
         .build()
 
     private val imageLoader = ImageLoader.Builder(applicationContext)
