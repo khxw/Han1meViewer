@@ -1,5 +1,16 @@
 [
   {
+    "title": "Han1meViewer 重制版 v2.1.172 更新公告",
+    "content": "本次更新内容：\n1. 软件更新下载新增 ghproxy.cn、gh-proxy.net、ghfast.top、ghproxy.net 四个镜像；\n2. 更新下载按镜像列表顺序尝试，任一失败自动切换下一个；\n3. 所有镜像失败后仍回退 GitHub 原地址；\n4. 支持识别旧版本缓存的镜像地址并自动剥离前缀；\n5. 关闭“使用更新镜像”后，仅使用 GitHub 原地址；\n6. 非 GitHub 下载地址不会被错误改写。\n仓库：https://github.com/khxw/Han1meViewer",
+    "positiveText": "前往下载",
+    "negativeText": "知道了",
+    "timestamp": 1795156120,
+    "priority": 0,
+    "imageUrl": null,
+    "isActive": true,
+    "actionUrl": "https://github.com/khxw/Han1meViewer/releases/tag/v2.1.172-remastered%2B261120277"
+  },
+  {
     "title": "Han1meViewer 重制版 v2.1.155 更新公告",
     "content": "本次更新内容：\n1. 源码、公告和发布维护分支统一至 main；\n2. 重新启用软件内更新功能，应用内更新只检查 GitHub Release；\n3. 新增“使用更新镜像”开关，默认开启；开启时优先使用 gh-proxy.com，失败后回退 GitHub 原地址，关闭后只使用 GitHub；\n4. 优化启动时自动检查更新，避免阻塞启动和重复请求。\n仓库：https://github.com/khxw/Han1meViewer",
     "positiveText": "前往仓库",
@@ -7,7 +18,7 @@
     "timestamp": 1794558821,
     "priority": 0,
     "imageUrl": null,
-    "isActive": true,
+    "isActive": false,
     "actionUrl": "https://github.com/khxw/Han1meViewer"
   },
   {
